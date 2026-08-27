@@ -109,6 +109,9 @@ class FlowModel(Document):
 		self.context_window = _detect_context_window(self.model_id) or self.context_window or 0
 
 	def _validate_provider_known(self):
+		if self.model_id and self.model_id.startswith("codex/"):
+			# not a real LiteLLM provider — see flow.lib.codex
+			return
 		try:
 			import litellm
 		except ImportError:
@@ -121,6 +124,20 @@ class FlowModel(Document):
 	@frappe.whitelist()
 	def test_connection(self):
 		self.check_permission("write")
+
+		if self.model_id.startswith("codex/"):
+			from flow.lib.codex import complete
+
+			try:
+				complete(
+					self.model_id.removeprefix("codex/"),
+					[{"role": "user", "content": "ping"}],
+					{},
+					provider="codex",
+				)
+			except Exception as e:
+				frappe.throw(str(e)[:500] or type(e).__name__, title=_(type(e).__name__))
+			return {"ok": True, "message": _("Connection OK")}
 
 		try:
 			import litellm
@@ -155,7 +172,12 @@ class FlowModel(Document):
 
 
 def _detect_context_window(model_id: str) -> int:
-	"""Max input tokens for `model_id` per litellm, or 0 if unknown/unmapped."""
+	"""Max input tokens for `model_id`, or 0 if unknown/unmapped."""
+	if model_id.startswith("codex/"):
+		from flow.lib.codex import model_metadata
+
+		return int(model_metadata(model_id.removeprefix("codex/")).get("max_tokens") or 0)
+
 	import litellm
 
 	try:
@@ -165,11 +187,20 @@ def _detect_context_window(model_id: str) -> int:
 	return int(info.get("max_input_tokens") or 0)
 
 
+# The ChatGPT-surface shortlist offered for the "codex" pseudo-provider — litellm
+# has no listing for it, so this mirrors builder's codex preset models.
+CODEX_MODELS = ["gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.3-codex", "gpt-5.5"]
+
+
 @frappe.whitelist()
 def get_provider_models(provider: str | None = None) -> list[str]:
 	if not provider:
 		return []
 
+	provider = provider.strip().lower()
+	if provider == "codex":
+		return CODEX_MODELS
+
 	import litellm
 
-	return sorted(litellm.models_by_provider.get(provider.strip().lower(), set()))
+	return sorted(litellm.models_by_provider.get(provider, set()))

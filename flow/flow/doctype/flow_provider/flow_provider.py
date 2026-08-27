@@ -50,6 +50,10 @@ class FlowProvider(Document):
 			self.api_key = self.api_key.strip()
 
 	def _validate_provider_known(self):
+		if self.provider == "codex":
+			# not a real LiteLLM provider — the internal flag Flow Model/Model use to
+			# route through the ChatGPT subscription adapter instead of litellm
+			return
 		try:
 			import litellm
 		except ImportError:
@@ -85,3 +89,32 @@ class FlowProvider(Document):
 				_("Extra Params may not include reserved keys: {0}.").format(", ".join(conflicting)),
 				title=_("Reserved Params"),
 			)
+
+
+@frappe.whitelist()
+def start_chatgpt_login() -> dict:
+	"""Begin connecting the "codex" Flow Provider to a ChatGPT Plus/Pro subscription."""
+	frappe.only_for("System Manager")
+	from flow.lib import codex_login
+
+	return codex_login.start()
+
+
+@frappe.whitelist()
+def poll_chatgpt_login(state: str) -> dict:
+	frappe.only_for("System Manager")
+	from flow.lib import codex_login
+
+	return codex_login.poll(state)
+
+
+@frappe.whitelist()
+def finish_chatgpt_login(redirect_url: str) -> dict:
+	frappe.only_for("System Manager")
+	from flow.lib import codex_login
+	from flow.lib.codex import CodexError
+
+	try:
+		return codex_login.finish(redirect_url)
+	except CodexError as e:
+		return {"status": "failed", "message": str(e)}

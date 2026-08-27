@@ -87,10 +87,13 @@ class Model:
 	) -> ChatResponse | Generator[str, None, ChatResponse]:
 		"""Call the model. When `stream=True`, returns a generator that yields text deltas
 		and returns the assembled `ChatResponse` via PEP 380 (`StopIteration.value`)."""
-		import litellm
-
 		if isinstance(messages, str):
 			messages = [{"role": "user", "content": messages}]
+
+		if self.model_id.startswith("codex/"):
+			return self._chat_codex(messages, tools, stream=stream)
+
+		import litellm
 
 		kwargs: dict[str, Any] = {
 			"model": self.model_id,
@@ -111,15 +114,42 @@ class Model:
 
 		return _normalize(litellm.completion(**kwargs))
 
+	def _chat_codex(
+		self,
+		messages: list[dict[str, Any]],
+		tools: list[dict[str, Any]] | None,
+		*,
+		stream: bool,
+	) -> ChatResponse | Generator[str, None, ChatResponse]:
+		"""The codex pseudo-provider (a ChatGPT subscription, see flow.lib.codex) only
+		streams — tool calls arrive as streamed deltas with no complete-response shape —
+		so a non-streaming call just drains the same generator _consume_stream already
+		knows how to fold into a ChatResponse, instead of a second normalization path."""
+		from flow.lib.codex import complete
+
+		bare_model = self.model_id.removeprefix("codex/")
+		chunks = complete(bare_model, messages, self.params, provider="codex", tools=tools, stream=True)
+		consumed = _consume_stream(chunks)
+		if stream:
+			return consumed
+		while True:
+			try:
+				next(consumed)
+			except StopIteration as stop:
+				return stop.value
+
 
 def resolve_provider_credentials(model_id: str) -> dict[str, Any]:
 	"""Look up central Flow Provider credentials for a model's provider."""
-	try:
-		import litellm
+	if model_id.startswith("codex/"):
+		provider = "codex"
+	else:
+		try:
+			import litellm
 
-		provider = litellm.get_llm_provider(model_id)[1]
-	except Exception:
-		return {}
+			provider = litellm.get_llm_provider(model_id)[1]
+		except Exception:
+			return {}
 
 	if not provider or not frappe.db.exists("Flow Provider", provider):
 		return {}
