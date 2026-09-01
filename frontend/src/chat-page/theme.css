@@ -40,3 +40,30 @@
 	--outline-gray-3: #2e9bd6;
 	--outline-gray-4: #2e9bd6;
 }
+
+/* Sidebar text: Jarvis leaves its nav links, chat titles, and section labels
+   on frappe-ui's own neutral grey/black ink scale — no brand tint — unlike
+   the navy ink tokens the rest of this page uses. Redefining the ink-gray
+   custom properties here, scoped to .flow-sidebar, lets every row (New Chat,
+   Agent/Macro/Knowledge Base, "Recent chats", chat titles, timestamps) pick
+   up the match through normal CSS inheritance, without touching each
+   Tailwind class individually or the navy tone used elsewhere on the page. */
+.flow-sidebar {
+	--ink-gray-9: #171717;
+	--ink-gray-8: #383838;
+	--ink-gray-7: #525252;
+	--ink-gray-6: #525252;
+	--ink-gray-5: #7c7c7c;
+	--ink-gray-4: #999999;
+	--ink-gray-3: #c7c7c7;
+}
+
+/* One flat size/weight for every sidebar row, overriding the per-row Tailwind
+   text-size utilities (text-sm, text-[11px], …) individually — this app's
+   tailwind.config sets `important: true`, so those utilities compile to
+   `!important` themselves and only another `!important` rule beats them. */
+.flow-sidebar,
+.flow-sidebar * {
+	font-size: 13px !important;
+	font-weight: 400 !important;
+}

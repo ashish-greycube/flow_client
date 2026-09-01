@@ -1,8 +1,8 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import BrandMark from "@/components/BrandMark.vue";
 import SearchInput from "@/components/SearchInput.vue";
-import { Button, FeatherIcon } from "@/lib/ui";
+import { FeatherIcon } from "@/lib/ui";
 import { useStore } from "@/store";
 import { __ } from "@/lib/translate";
 import { searchSessions } from "@/api/client";
@@ -12,6 +12,7 @@ const { recentSessions, sessionName, switchSession, newChat, sending } = useStor
 const query = ref("");
 const results = ref([]);
 const searching = ref(false);
+const searchInput = ref(null);
 
 let debounce;
 let searchSeq = 0;
@@ -43,6 +44,23 @@ function choose(name) {
 	switchSession(name);
 }
 
+function focusSearch() {
+	nextTick(() => searchInput.value?.focus());
+}
+
+// Nav rows to the doctypes a Flow user manages directly — same list views the
+// desk already has, just one click away from the chat instead of hunting
+// through the workspace.
+function openList(doctype) {
+	frappe.set_route("List", doctype);
+}
+
+// "Agent" opens the custom catalog page (flow-agents) instead of the plain
+// list view — Macro/Knowledge Base still go through openList above.
+function openAgentsPage() {
+	frappe.set_route("flow-agents");
+}
+
 function timeAgo(ds) {
 	if (!ds) return "";
 	return window.moment ? moment(ds).fromNow() : ds;
@@ -58,19 +76,51 @@ function timeAgo(ds) {
 			<span class="text-sm font-semibold text-ink-gray-9">{{ __("Flow") }}</span>
 		</div>
 
-		<div class="px-2 pb-2">
-			<Button
-				variant="ghost"
-				class="h-[30px] w-full !justify-start text-sm"
+		<!-- action links: New Chat / Search Chat -->
+		<nav class="flex flex-col gap-px px-2 pb-1.5">
+			<button
+				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
 				:disabled="sending"
 				@click="newChat"
 			>
-				<template #prefix><FeatherIcon name="plus" class="h-3.5 w-3.5" /></template>
-				{{ __("New chat") }}
-			</Button>
-		</div>
+				<FeatherIcon name="plus" class="h-4 w-4 shrink-0" />
+				{{ __("New Chat") }}
+			</button>
+			<button
+				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
+				@click="focusSearch"
+			>
+				<FeatherIcon name="search" class="h-4 w-4 shrink-0" />
+				{{ __("Search Chat") }}
+			</button>
+		</nav>
 
-		<SearchInput v-model="query" :placeholder="__('Search chats…')" />
+		<!-- nav links: the doctypes a Flow user configures directly -->
+		<nav class="flex flex-col gap-px border-t border-outline-gray-1 px-2 py-1.5">
+			<button
+				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
+				@click="openAgentsPage"
+			>
+				<FeatherIcon name="cpu" class="h-4 w-4 shrink-0" />
+				{{ __("Agent") }}
+			</button>
+			<button
+				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
+				@click="openList('Flow Macro')"
+			>
+				<FeatherIcon name="layers" class="h-4 w-4 shrink-0" />
+				{{ __("Macro") }}
+			</button>
+			<button
+				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
+				@click="openList('Flow Knowledge Base')"
+			>
+				<FeatherIcon name="book-open" class="h-4 w-4 shrink-0" />
+				{{ __("Knowledge Base") }}
+			</button>
+		</nav>
+
+		<SearchInput ref="searchInput" v-model="query" :placeholder="__('Search chats…')" />
 
 		<div class="flow-scrollbar flex-1 overflow-y-auto p-1.5">
 			<p class="px-2 py-1.5 text-sm text-ink-gray-5">

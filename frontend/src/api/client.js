@@ -8,6 +8,18 @@ function getList(doctype, options) {
 export const loadAgents = () =>
 	getList("Flow Agent", { filters: { enabled: 1 }, fields: ["name", "title"], limit: 50 });
 
+// Full agent catalog for the Agents page (Featured/Enabled/Disabled tabs +
+// search) — every agent regardless of enabled state, with the fields needed
+// to render a card. Flow has no human-facing "description" field on Flow
+// Agent, so the card falls back to a truncated `instructions` (the LLM
+// system prompt) — the closest thing to one that already exists.
+export const loadAllAgents = () =>
+	getList("Flow Agent", {
+		fields: ["name", "title", "enabled", "is_system_generated", "model", "instructions"],
+		order_by: "title asc",
+		limit: 500,
+	});
+
 export const loadModels = () =>
 	getList("Flow Model", { filters: { enabled: 1 }, fields: ["name", "title"], limit: 50 });
 

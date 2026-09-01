@@ -12,6 +12,7 @@ defineEmits(["update:modelValue"]);
 
 const input = ref(null);
 onMounted(() => props.autofocus && nextTick(() => input.value?.focus()));
+defineExpose({ focus: () => input.value?.focus() });
 </script>
 
 <template>
