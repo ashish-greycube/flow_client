@@ -5,7 +5,8 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "tool"
+  "tool",
+  "permission"
  ],
  "fields": [
   {
@@ -15,6 +16,14 @@
    "label": "Tool",
    "options": "Flow Tool",
    "reqd": 1
+  },
+  {
+   "description": "Per-agent override. Blank inherits the tool's own \"Requires Confirmation\" default (Needs Approval if checked, else Always Allow).",
+   "fieldname": "permission",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Permission",
+   "options": "\nAlways Allow\nNeeds Approval\nBlocked"
   }
  ],
  "index_web_pages_for_search": 0,

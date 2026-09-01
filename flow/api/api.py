@@ -164,6 +164,105 @@ def get_agent_tools(agent: str) -> dict[str, bool]:
 
 
 @frappe.whitelist()
+def get_agent_tool_permissions(agent: str) -> list[dict[str, Any]]:
+	"""Per-tool permission rows for `agent`'s tools, for the chat UI's Tool Permissions
+	dialog. `permission` is the explicit per-agent override if one is set, else null —
+	the caller falls back to `requires_confirmation` (Needs Approval if checked, else
+	Always Allow), same as the resolver does when actually running the agent."""
+	if not isinstance(agent, str) or not agent.strip():
+		return []
+
+	doc = frappe.get_doc("Flow Agent", agent.strip())
+	frappe.has_permission("Flow Agent", "read", doc.name, throw=True)
+
+	tool_names = [row.tool for row in doc.tools]
+	if not tool_names:
+		return []
+	tools = {
+		row.name: row
+		for row in frappe.get_all(
+			"Flow Tool",
+			filters={"name": ["in", tool_names]},
+			fields=["name", "slug", "title", "requires_confirmation"],
+		)
+	}
+	out = []
+	for row in doc.tools:
+		tool = tools.get(row.tool)
+		if not tool:
+			continue
+		out.append(
+			{
+				"tool": tool.slug,
+				"title": tool.title,
+				"requires_confirmation": bool(tool.requires_confirmation),
+				"permission": row.permission or None,
+			}
+		)
+	return out
+
+
+@frappe.whitelist()
+def set_agent_tool_permissions(agent: str, permissions: dict[str, str] | str) -> dict[str, str]:
+	"""Bulk-set per-agent tool permission overrides. `permissions` maps tool slug to
+	"Always Allow" / "Needs Approval" / "Blocked", or "" to clear the override back
+	to the tool's own default."""
+	if isinstance(permissions, str):
+		permissions = frappe.parse_json(permissions)
+
+	allowed = {"", "Always Allow", "Needs Approval", "Blocked"}
+	for value in permissions.values():
+		if value not in allowed:
+			frappe.throw(_("Invalid permission value: {0}").format(value), title=_("Invalid Permission"))
+
+	doc = frappe.get_doc("Flow Agent", agent.strip())
+	frappe.has_permission("Flow Agent", "write", doc.name, throw=True)
+
+	changed = False
+	for row in doc.tools:
+		if row.tool in permissions and (row.permission or "") != permissions[row.tool]:
+			row.permission = permissions[row.tool] or None
+			changed = True
+	if changed:
+		doc.save()
+	return {"status": "ok"}
+
+
+@frappe.whitelist()
+def create_macro_from_prompts(
+	agent: str, macro_name: str, steps: list[dict[str, Any]] | str
+) -> dict[str, str]:
+	"""Create a Flow Macro from the chat's "Save as macro" action: `steps` is the
+	ordered list of user prompts from the conversation, as [{label, prompt}, ...]."""
+	if isinstance(steps, str):
+		steps = frappe.parse_json(steps)
+	if not isinstance(macro_name, str) or not macro_name.strip():
+		frappe.throw(_("Macro name is required."), title=_("Invalid Macro Name"))
+	if not isinstance(agent, str) or not agent.strip():
+		frappe.throw(_("Agent is required."), title=_("Invalid Agent"))
+
+	frappe.has_permission("Flow Macro", "create", throw=True)
+	frappe.has_permission("Flow Agent", "read", agent.strip(), throw=True)
+
+	doc = frappe.new_doc("Flow Macro")
+	doc.macro_name = macro_name.strip()
+	doc.agent = agent.strip()
+	for step in steps or []:
+		prompt = (step or {}).get("prompt") if isinstance(step, dict) else None
+		if not prompt or not str(prompt).strip():
+			continue
+		doc.append(
+			"steps",
+			{"label": str((step or {}).get("label") or "").strip(), "prompt": str(prompt).strip()},
+		)
+	if not doc.steps:
+		frappe.throw(_("At least one prompt is required."), title=_("Nothing to Save"))
+
+	doc.insert()
+	return {"name": doc.name}
+
+
+@frappe.whitelist()
 def attach_file(file: str) -> dict[str, Any]:
 	"""Validate and extract an uploaded File for use as a chat attachment. Errors
 	(unsupported type, unreadable, not owned) surface here, at upload time. The

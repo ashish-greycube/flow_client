@@ -52,11 +52,15 @@ class FlowTool(Document):
 	def before_rename(self, old: str, _new: str, _merge: bool = False) -> None:
 		block_rename(self, old)
 
-	def to_tool(self):
-		"""Resolve this row into a runtime Tool the Agent can call."""
+	def to_tool(self, *, requires_confirmation: bool | None = None):
+		"""Resolve this row into a runtime Tool the Agent can call.
+
+		`requires_confirmation` overrides this tool's own default when given — used
+		to apply a Flow Agent Tool row's per-agent permission override.
+		"""
 		from flow.lib.resolver import resolve_tool
 
-		return resolve_tool(self)
+		return resolve_tool(self, requires_confirmation=requires_confirmation)
 
 	def _normalize(self):
 		for field in ("title", "slug", "import_path"):

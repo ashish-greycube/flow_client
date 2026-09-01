@@ -21,6 +21,16 @@ DEFAULT_TOOL_SLUGS = ("describe", "read", "execute")
 DEFAULT_MAX_ITERATIONS = 20
 
 
+def _confirmation_override(permission: str | None) -> bool | None:
+	"""Map a Flow Agent Tool row's permission override to a `requires_confirmation`
+	override for the resolver. Blank/unset means "inherit the tool's own default"."""
+	if permission == "Always Allow":
+		return False
+	if permission == "Needs Approval":
+		return True
+	return None
+
+
 class FlowAgent(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
@@ -42,7 +52,7 @@ class FlowAgent(Document):
 		max_iterations: DF.Int
 		model: DF.Link
 		title: DF.Data
-		tools: DF.TableMultiSelect[FlowAgentTool]
+		tools: DF.Table[FlowAgentTool]
 	# end: auto-generated types
 
 	def on_trash(self):
@@ -110,6 +120,10 @@ class FlowAgent(Document):
 
 		resolved: list[Tool] = []
 		for row in self.tools:
+			# Blocked wins outright: the tool is left off the LLM's tool list entirely,
+			# same as never having been attached to this agent.
+			if row.permission == "Blocked":
+				continue
 			try:
 				tool_doc = frappe.get_doc("Flow Tool", row.tool)
 			except frappe.DoesNotExistError:
@@ -122,7 +136,7 @@ class FlowAgent(Document):
 			elif tool_doc.name == MEMORY_TOOL_SLUG:
 				resolved.append(bind_update_memory(self.name))
 			else:
-				resolved.append(tool_doc.to_tool())
+				resolved.append(tool_doc.to_tool(requires_confirmation=_confirmation_override(row.permission)))
 		return resolved
 
 	def new_session(self, *, model: str | None = None, title: str | None = None):

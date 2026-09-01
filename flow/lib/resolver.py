@@ -32,18 +32,26 @@ _ARRAY_NAMES = frozenset(
 _OBJECT_NAMES = frozenset({"dict", "Dict", "Mapping"})
 
 
-def resolve_tool(doc: FlowTool, *, restrict_commit_rollback: bool = False) -> Tool:
+def resolve_tool(
+	doc: FlowTool, *, restrict_commit_rollback: bool = False, requires_confirmation: bool | None = None
+) -> Tool:
 	"""Turn a Flow Tool row into a runtime Tool the Agent can call.
 
 	`restrict_commit_rollback` removes commit/rollback from a Script tool's sandbox,
 	so it cannot escape a surrounding test transaction.
+
+	`requires_confirmation`, when not None, overrides the tool's own default — used
+	by a Flow Agent Tool row's per-agent permission override (Always Allow / Needs
+	Approval).
 	"""
 	if doc.type == "Imported":
-		return _resolve_module(doc)
-	return _resolve_script(doc, restrict_commit_rollback=restrict_commit_rollback)
+		return _resolve_module(doc, requires_confirmation=requires_confirmation)
+	return _resolve_script(
+		doc, restrict_commit_rollback=restrict_commit_rollback, requires_confirmation=requires_confirmation
+	)
 
 
-def _resolve_module(doc: FlowTool) -> Tool:
+def _resolve_module(doc: FlowTool, *, requires_confirmation: bool | None = None) -> Tool:
 	try:
 		obj = frappe.get_attr(doc.import_path)
 	except Exception as e:
@@ -53,27 +61,46 @@ def _resolve_module(doc: FlowTool) -> Tool:
 		)
 
 	if isinstance(obj, Tool):
-		return _build_tool(doc, obj.parameters, obj.func, confirm_prompt=obj.confirm_prompt)
+		return _build_tool(
+			doc,
+			obj.parameters,
+			obj.func,
+			confirm_prompt=obj.confirm_prompt,
+			requires_confirmation=requires_confirmation,
+		)
 	if callable(obj):
-		return _build_tool(doc, build_schema(obj), obj)
+		return _build_tool(doc, build_schema(obj), obj, requires_confirmation=requires_confirmation)
 	frappe.throw(
 		_("Import path {0} is not a Tool or callable.").format(doc.import_path),
 		title=_("Invalid Tool"),
 	)
 
 
-def _resolve_script(doc: FlowTool, *, restrict_commit_rollback: bool = False) -> Tool:
+def _resolve_script(
+	doc: FlowTool, *, restrict_commit_rollback: bool = False, requires_confirmation: bool | None = None
+) -> Tool:
 	runner = _make_script_runner(doc.code, doc.slug, restrict_commit_rollback=restrict_commit_rollback)
-	return _build_tool(doc, schema_from_code(doc.code), runner)
+	return _build_tool(
+		doc, schema_from_code(doc.code), runner, requires_confirmation=requires_confirmation
+	)
 
 
-def _build_tool(doc: FlowTool, parameters: dict[str, Any], func: Any, *, confirm_prompt: Any = None) -> Tool:
+def _build_tool(
+	doc: FlowTool,
+	parameters: dict[str, Any],
+	func: Any,
+	*,
+	confirm_prompt: Any = None,
+	requires_confirmation: bool | None = None,
+) -> Tool:
 	return Tool(
 		name=doc.slug,
 		description=doc.description,
 		parameters=parameters,
 		func=func,
-		requires_confirmation=bool(doc.requires_confirmation),
+		requires_confirmation=(
+			bool(doc.requires_confirmation) if requires_confirmation is None else requires_confirmation
+		),
 		confirm_prompt=confirm_prompt,
 	)
 

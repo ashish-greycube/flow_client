@@ -1,12 +1,15 @@
 <script setup>
 import BrandMark from "./BrandMark.vue";
 import { __ } from "@/lib/translate";
+import { timeGreeting, currentUserName } from "@/lib/greeting";
 
 defineProps({
 	setup: { type: Boolean, default: false },
 	hasModels: { type: Boolean, default: true },
 	hasAgents: { type: Boolean, default: true },
 });
+
+const userName = currentUserName();
 </script>
 
 <template>
@@ -52,7 +55,9 @@ defineProps({
 		</template>
 
 		<template v-else>
-			<div class="text-lg font-semibold text-ink-gray-9">{{ __("Flow") }}</div>
+			<div class="text-2xl font-semibold text-ink-gray-9">
+				{{ userName ? `${timeGreeting()}, ${userName}` : __("Flow") }}
+			</div>
 			<div class="max-w-[240px] text-xs leading-relaxed">
 				{{ __("Ask about your data, draft records, or run a task.") }}
 			</div>

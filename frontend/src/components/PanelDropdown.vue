@@ -10,6 +10,10 @@ const props = defineProps({
 	modelValue: { default: null },
 	items: { type: Array, default: () => [] }, // [{ value, label }]
 	align: { type: String, default: "left" }, // left | right
+	// "top": opens above the trigger (the composer toolbar, near the bottom of the
+	// panel). "bottom": opens below it — for a trigger near the top of its container,
+	// like a dialog's group header, where "top" would clip against the scroll area.
+	placement: { type: String, default: "top" },
 	disabled: { type: Boolean, default: false },
 	searchable: { type: Boolean, default: false },
 });
@@ -66,8 +70,11 @@ watch(open, async (v) => {
 			<div class="fixed inset-0 z-40" @click="open = false"></div>
 			<div
 				ref="menu"
-				class="absolute bottom-[calc(100%+8px)] z-50 w-max min-w-[12rem] max-w-[15rem] overflow-hidden rounded-lg border border-outline-gray-2 bg-surface-white shadow-2xl"
-				:class="align === 'right' ? 'right-0' : 'left-0'"
+				class="absolute z-50 w-max min-w-[12rem] max-w-[15rem] overflow-hidden rounded-lg border border-outline-gray-2 bg-surface-white shadow-2xl"
+				:class="[
+					align === 'right' ? 'right-0' : 'left-0',
+					placement === 'bottom' ? 'top-[calc(100%+8px)]' : 'bottom-[calc(100%+8px)]',
+				]"
 				:style="shift ? { transform: `translateX(${shift}px)` } : null"
 			>
 				<SearchInput

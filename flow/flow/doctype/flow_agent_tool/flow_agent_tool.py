@@ -16,6 +16,7 @@ class FlowAgentTool(Document):
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data
+		permission: DF.Literal["", "Always Allow", "Needs Approval", "Blocked"]
 		tool: DF.Link
 	# end: auto-generated types
 

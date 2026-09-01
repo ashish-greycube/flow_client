@@ -1,0 +1,42 @@
+/* Flow Chat page theme — a fixed brand palette layered over frappe-ui's default
+   tokens (not a light/dark pair; the same values apply whichever theme the
+   desk is in, since postcss-prefix-selector maps both `:root` and
+   `[data-theme="dark"]` onto this bundle's own #flow-root wrapper). Only the
+   tokens actually rendered on this page are touched — see the component
+   audit this was built from — so anything this page doesn't use keeps
+   frappe-ui's defaults untouched. */
+
+:root,
+[data-theme="dark"] {
+	/* Surfaces: page/composer white, sidebar/hover/active a neutral grey scale
+	   (frappe-ui's own defaults — the same ones Jarvis's AppShell sidebar uses
+	   verbatim, `bg-surface-gray-1` etc.), so the sidebar reads as grey chrome
+	   rather than a tinted panel. Solid buttons (Send) and the brand mark keep
+	   the dark-navy pair — that's product branding, not sidebar chrome. */
+	--surface-white: #ffffff;
+	--surface-gray-1: #f8f8f8;
+	--surface-gray-2: #f3f3f3;
+	--surface-gray-3: #ededed;
+	--surface-gray-4: #e2e2e2;
+	--surface-gray-5: #0f172a;
+	--surface-gray-6: #0f172a;
+	--surface-gray-7: #12263a;
+
+	/* Text: dark navy for headings/body, slate for secondary/muted copy. */
+	--ink-white: #ffffff;
+	--ink-gray-9: #0f172a;
+	--ink-gray-8: #12263a;
+	--ink-gray-7: #12263a;
+	--ink-gray-6: #5b6472;
+	--ink-gray-5: #5b6472;
+	--ink-gray-4: #5b6472;
+	--ink-gray-3: #5b6472;
+
+	/* Borders: neutral grey for structural dividers (sidebar, search) to match
+	   the grey sidebar surface; the composer keeps a paler resting edge and
+	   the accent blue for focus/drag states. */
+	--outline-gray-1: #ededed;
+	--outline-gray-2: #e2e2e2;
+	--outline-gray-3: #2e9bd6;
+	--outline-gray-4: #2e9bd6;
+}

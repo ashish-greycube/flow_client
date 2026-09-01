@@ -68,6 +68,21 @@ export const stopRun = (run_name) => frappe.xcall("flow.api.stop_run", { run_nam
 // approval tool call from an inline one.
 export const getAgentTools = (agent) => frappe.xcall("flow.api.get_agent_tools", { agent });
 
+// Per-tool permission rows for the agent's Tool Permissions dialog: [{ tool, title,
+// requires_confirmation, permission }], `permission` null unless explicitly overridden.
+export const getAgentToolPermissions = (agent) =>
+	frappe.xcall("flow.api.get_agent_tool_permissions", { agent });
+
+// Bulk-set per-agent tool permission overrides. `permissions` maps tool slug →
+// "Always Allow" | "Needs Approval" | "Blocked" | "" (clears the override).
+export const setAgentToolPermissions = (agent, permissions) =>
+	frappe.xcall("flow.api.set_agent_tool_permissions", { agent, permissions });
+
+// "Save as macro": turns the conversation's user prompts into a new Flow Macro.
+// `steps` is [{ label, prompt }, ...] in order. Returns the created macro's name.
+export const createMacroFromPrompts = (agent, macro_name, steps) =>
+	frappe.xcall("flow.api.create_macro_from_prompts", { agent, macro_name, steps });
+
 // Upload a file as private, returning the created File doc. The chat attachment
 // flow needs the File name to stage it via attachFile.
 export async function uploadFile(file) {

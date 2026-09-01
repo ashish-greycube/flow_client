@@ -84,9 +84,9 @@
    "label": "Tools"
   },
   {
-   "description": "Flow Tools this agent can call. Defaults to the three primitives (describe, read, execute) on creation.",
+   "description": "Flow Tools this agent can call, with an optional per-agent permission override. Defaults to the three primitives (describe, read, execute) on creation.",
    "fieldname": "tools",
-   "fieldtype": "Table MultiSelect",
+   "fieldtype": "Table",
    "label": "Tools",
    "options": "Flow Agent Tool"
   },

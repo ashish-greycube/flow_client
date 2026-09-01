@@ -204,6 +204,11 @@ watch(focusTick, () => nextTick(() => el.value?.focus()));
 				</template>
 			</PanelDropdown>
 
+			<!-- host-supplied extras (e.g. the chat page's tool-permissions trigger) —
+			     kept out of this shared component so it stays agnostic of page-specific
+			     dialogs; placed here so it sits with the agent/model controls. -->
+			<slot name="tools" />
+
 			<span class="flex-1"></span>
 
 			<Button
