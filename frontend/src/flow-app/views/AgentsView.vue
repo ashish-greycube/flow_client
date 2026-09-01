@@ -77,7 +77,7 @@ function newAgent() {
 </script>
 
 <template>
-	<div class="flow-panel flow-agents-page flex h-full flex-col bg-surface-white text-ink-gray-9">
+	<div class="relative flex min-w-0 flex-1 flex-col bg-surface-white text-ink-gray-9">
 		<header class="flex items-center justify-between border-b border-outline-gray-1 px-6 py-4">
 			<h1 class="text-lg font-semibold text-ink-gray-9">{{ __("Agents") }}</h1>
 			<Button variant="solid" @click="newAgent">
@@ -146,7 +146,9 @@ function newAgent() {
 						</div>
 					</div>
 
-					<p class="line-clamp-3 text-sm text-ink-gray-6">{{ description(a.instructions) }}</p>
+					<p class="line-clamp-3 text-sm font-normal text-ink-gray-6">
+					{{ description(a.instructions) }}
+				</p>
 
 					<div class="mt-auto flex items-center gap-1.5">
 						<span

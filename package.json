@@ -5,10 +5,9 @@
   "description": "AI assistant slide-in panel for the Frappe desk (frappe-ui)",
   "scripts": {
     "dev": "vite build --watch",
-    "build": "vite build && vite build --config vite.chat.config.js && vite build --config vite.agents.config.js",
+    "build": "vite build && vite build --config vite.app.config.js",
     "build:panel": "vite build",
-    "build:chat": "vite build --config vite.chat.config.js",
-    "build:agents": "vite build --config vite.agents.config.js"
+    "build:app": "vite build --config vite.app.config.js"
   },
   "dependencies": {
     "frappe-ui": "1.0.0-beta.3",

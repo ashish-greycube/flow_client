@@ -2,11 +2,15 @@ import { fileURLToPath, URL } from "node:url";
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vite";
 
-// Builds the full-page Flow Chat UI (frontend/src/chat-page) as a single
-// self-contained IIFE bundle + one CSS file, emitted into the app's public
-// dir. Loaded on demand by the "flow-chat" desk page (see
-// flow/flow/page/flow_chat) via frappe.require — separate from the slide-in
-// panel bundle built by vite.config.js, which the two never load together.
+// Builds the consolidated Flow app (frontend/src/flow-app) as a single
+// self-contained IIFE bundle + one CSS file — Sidebar + vue-router shell with
+// Chat/Agents/Flow Guide as routed views underneath. Replaces the earlier
+// vite.chat.config.js + vite.agents.config.js pair (Agents was a wholly
+// separate Frappe Page + bundle with no sidebar of its own). Emitted into
+// the same flow_chat output dir/filenames as before so the existing
+// "flow-chat" desk page (flow/flow/page/flow_chat) needs no changes — it just
+// loads a bigger bundle now. Separate from the slide-in widget bundle built
+// by vite.config.js; the two never load on the same page.
 export default defineConfig({
 	define: {
 		"process.env.NODE_ENV": JSON.stringify("production"),
@@ -33,9 +37,9 @@ export default defineConfig({
 		sourcemap: false,
 		target: "es2017",
 		lib: {
-			entry: fileURLToPath(new URL("./frontend/src/chat-page/main.js", import.meta.url)),
+			entry: fileURLToPath(new URL("./frontend/src/flow-app/main.js", import.meta.url)),
 			formats: ["iife"],
-			name: "FlowChatPage",
+			name: "FlowApp",
 			fileName: () => "flow_chat.js",
 		},
 		rollupOptions: {

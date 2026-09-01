@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, watch, nextTick } from "vue";
+import { ref, computed, watch } from "vue";
+import { useRouter } from "vue-router";
 import BrandMark from "@/components/BrandMark.vue";
 import SearchInput from "@/components/SearchInput.vue";
 import { FeatherIcon } from "@/lib/ui";
@@ -7,12 +8,12 @@ import { useStore } from "@/store";
 import { __ } from "@/lib/translate";
 import { searchSessions } from "@/api/client";
 
+const router = useRouter();
 const { recentSessions, sessionName, switchSession, newChat, sending } = useStore();
 
 const query = ref("");
 const results = ref([]);
 const searching = ref(false);
-const searchInput = ref(null);
 
 let debounce;
 let searchSeq = 0;
@@ -39,13 +40,25 @@ watch(query, (q) => {
 // Server results while searching, otherwise the recent list the store keeps fresh.
 const list = computed(() => (query.value.trim() ? results.value : recentSessions.value));
 
+// A chat action only means something on the Chat view — jump there first if
+// the sidebar is clicked from Agents/Flow Guide.
+function goToChat() {
+	if (router.currentRoute.value.path !== "/") router.push("/");
+}
+
+function startNewChat() {
+	newChat();
+	goToChat();
+}
+
 function choose(name) {
 	if (sending.value) return;
 	switchSession(name);
+	goToChat();
 }
 
-function focusSearch() {
-	nextTick(() => searchInput.value?.focus());
+function openAgents() {
+	router.push("/agents");
 }
 
 // Nav rows to the doctypes a Flow user manages directly — same list views the
@@ -53,12 +66,6 @@ function focusSearch() {
 // through the workspace.
 function openList(doctype) {
 	frappe.set_route("List", doctype);
-}
-
-// "Agent" opens the custom catalog page (flow-agents) instead of the plain
-// list view — Macro/Knowledge Base still go through openList above.
-function openAgentsPage() {
-	frappe.set_route("flow-agents");
 }
 
 function timeAgo(ds) {
@@ -81,17 +88,10 @@ function timeAgo(ds) {
 			<button
 				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
 				:disabled="sending"
-				@click="newChat"
+				@click="startNewChat"
 			>
 				<FeatherIcon name="plus" class="h-4 w-4 shrink-0" />
 				{{ __("New Chat") }}
-			</button>
-			<button
-				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
-				@click="focusSearch"
-			>
-				<FeatherIcon name="search" class="h-4 w-4 shrink-0" />
-				{{ __("Search Chat") }}
 			</button>
 		</nav>
 
@@ -99,7 +99,7 @@ function timeAgo(ds) {
 		<nav class="flex flex-col gap-px border-t border-outline-gray-1 px-2 py-1.5">
 			<button
 				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
-				@click="openAgentsPage"
+				@click="openAgents"
 			>
 				<FeatherIcon name="cpu" class="h-4 w-4 shrink-0" />
 				{{ __("Agent") }}
@@ -118,9 +118,16 @@ function timeAgo(ds) {
 				<FeatherIcon name="book-open" class="h-4 w-4 shrink-0" />
 				{{ __("Knowledge Base") }}
 			</button>
+			<button
+				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
+				@click="openList('Flow Trigger')"
+			>
+				<FeatherIcon name="zap" class="h-4 w-4 shrink-0" />
+				{{ __("Triggers") }}
+			</button>
 		</nav>
 
-		<SearchInput ref="searchInput" v-model="query" :placeholder="__('Search chats…')" />
+		<SearchInput v-model="query" :placeholder="__('Search chats…')" />
 
 		<div class="flow-scrollbar flex-1 overflow-y-auto p-1.5">
 			<p class="px-2 py-1.5 text-sm text-ink-gray-5">
