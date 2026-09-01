@@ -133,7 +133,7 @@
       "title": "Retrospective Baseline Meter (auditor)",
       "domain": "measurement",
       "nature": "auditor",
-      "status": "Published",
+      "status": "Coming Soon",
       "version": "0.3.0",
       "description": "Reads 6-12 months of your own ERP history and reports the facts that size everything else: how long receipts take to become invoices, how quickly sales invoices get settled, how many entries were reversed, what your books already carry under interest and late-fee heads, how much stock is aged, and how many documents you process each period. Read-only; writes nothing, decides nothing, and never labels anything good or bad - it reports what your database already knows.",
       "doctypes_required": [
@@ -160,7 +160,7 @@
       "title": "Baseline Meter - Helpdesk Extension (auditor)",
       "domain": "measurement",
       "nature": "auditor",
-      "status": "Published",
+      "status": "Coming Soon",
       "version": "0.2.0",
       "description": "Extends the Retrospective Baseline Meter onto Helpdesk records: how quickly tickets get a first response, how quickly they get resolved, and how many tickets you handle each period. Installable only where Helpdesk is present. Read-only; reads timestamps, statuses, and counts - never ticket conversation content.",
       "doctypes_required": [
@@ -199,7 +199,7 @@
       "title": "Cash-Limit Breach-Candidate Worklist — s.40A(3) / s.269ST (auditor)",
       "domain": "india-compliance",
       "nature": "auditor",
-      "status": "Published",
+      "status": "Coming Soon",
       "version": "0.2.1",
       "description": "Scans your cash payments and cash receipts and lists the ones that cross India's income-tax cash limits: expenses paid in cash above ₹10,000 to one payee in a day (₹35,000 for transporters), and cash received of ₹2,00,000 or more in aggregate from one person. Ships a monthly preventive worklist and a pre-flighted Form 3CD data pack. Read-only breach-candidate list for your CA to review; never edits a voucher, books anything, files a return, or decides that any payment is actually disallowed or penalised.",
       "doctypes_required": [
@@ -243,7 +243,7 @@
       "title": "Custom App Learning Scribe",
       "domain": "knowledge",
       "nature": "scribe",
-      "status": "Published",
+      "status": "Coming Soon",
       "version": "0.1.0",
       "description": "Reads your installed CUSTOM Frappe apps' source and writes business-first wiki pages about them — what each app does, its doctypes, workflows, validations and integrations — so your team and the assistant can rely on it later. Runs on demand in the Jarvis container (your bench never sees a source-laden chat), never reads core-app source, writes only the org wiki (no ERP write tool), and updates pages in place on re-run. Only run it on apps whose code you trust: source is treated as data, not instructions, but could still try to steer the agent. Admin-restricted (System Manager / Jarvis Admin).",
       "doctypes_required": [
@@ -258,7 +258,7 @@
       "title": "Cycle-Count Planner Operator",
       "domain": "inventory-count",
       "nature": "operator",
-      "status": "Published",
+      "status": "Coming Soon",
       "version": "0.1.0",
       "description": "Runs a rolling cycle-count programme ERPNext has no native planner for: ranks the SKU book by value (ABC) and movement (velocity), reads how long since each item/warehouse was last counted, and for the lines due this cycle stages a docstatus-0 draft Stock Reconciliation per warehouse with item rows pre-filled and the counted quantity left blank for the human counter, plus one evidence-carrying Approval Request so a store lead approves the count list first. Proposes only; it never counts, never fills a quantity, and never submits a reconciliation.",
       "doctypes_required": [
@@ -311,7 +311,7 @@
       "title": "Deal & Pipeline-Ageing Auditor (auditor)",
       "domain": "crm",
       "nature": "auditor",
-      "status": "Published",
+      "status": "Coming Soon",
       "version": "0.2.0",
       "description": "Weekly read-only pipeline-hygiene scrub of your open CRM deals: surfaces deals that have gone quiet, aged in their current stage, run past their expected close date, or have no next step scheduled, then ranks them into a per-owner worklist so the forecast reflects deals that are actually moving. Never edits a deal, moves a stage, changes a date, or creates a task.",
       "doctypes_required": [
@@ -358,7 +358,7 @@
       "title": "FEFO Violation & Expiry Auditor (auditor)",
       "domain": "inventory",
       "nature": "auditor",
-      "status": "Published",
+      "status": "Coming Soon",
       "version": "0.2.2",
       "description": "For batch-tracked pharma/FMCG/food stock: replays each day's outward movements to catch FEFO violations — a dispatch that skipped an older-expiry batch that still had stock — and lists on-hand batches inside the near-expiry and past-expiry horizon, ranked by value. Read-only; hyperlinks every finding to its batch and dispatch. Never touches stock, holds a shipment, or writes off a batch.",
       "doctypes_required": [
@@ -401,7 +401,7 @@
       "title": "GRN Hygiene & Receiving-Discipline Auditor (auditor)",
       "domain": "inventory",
       "nature": "auditor",
-      "status": "Published",
+      "status": "Coming Soon",
       "version": "0.3.0",
       "description": "Sweeps goods receipts (Purchase Receipts) for receiving-discipline gaps: UOM-conversion anomalies that distort stock quantity, receipts missing the batch/serial capture the Item mandates, ageing received-but-not-billed (GRNI) balances, and direct receipts booked with no Purchase Order to match against. Ranks each gap with a rupee or count figure and hyperlinks it to the offending receipt line. Read-only; never edits a receipt, posts, chases a vendor, or touches stock or valuation.",
       "doctypes_required": [
@@ -470,7 +470,7 @@
       "title": "Lead & Data-Hygiene Auditor",
       "domain": "crm",
       "nature": "auditor",
-      "status": "Published",
+      "status": "Coming Soon",
       "version": "0.2.0",
       "description": "Read-only hygiene sweep of your Frappe CRM: finds duplicate and near-duplicate leads (the same person entered twice across leads and deals), flags leads marked converted with no matching deal, and surfaces uncontactable, unassigned, or SLA-breached leads into a ranked worklist. Never merges, edits, assigns, or deletes a record — it hands sales-ops the exceptions and a human decides.",
       "doctypes_required": [
@@ -510,7 +510,7 @@
       "title": "MSME 43B(h) Ageing-Window Worklist (auditor)",
       "domain": "india-compliance",
       "nature": "auditor",
-      "status": "Published",
+      "status": "Coming Soon",
       "version": "0.2.1",
       "description": "For suppliers you have already classified as Micro/Small MSME, this overlays each open payable's elapsed days against its 15/45-day window and projects whether it will still be unpaid on 31-March, when s.43B(h) defers the deduction. Ships a pay-before-year-end worklist on top of ERPNext's native AP Ageing report. Read-only; never records a payment, edits a voucher, classifies a supplier, or decides what you may deduct.",
       "doctypes_required": [
@@ -532,7 +532,7 @@
       "title": "Negative-Stock & Valuation Auditor",
       "domain": "inventory",
       "nature": "auditor",
-      "status": "Published",
+      "status": "Coming Soon",
       "version": "0.2.0",
       "description": "Runs ERPNext's stock-value vs account-value comparison on a schedule and works the residue: flags negative on-hand balances, zero-rate receipts, abnormal valuation-rate jumps, internal stock-value inconsistencies, and where your perpetual stock value drifts from its stock-in-hand GL account. Ranks each exception by rupees with a link to the offending ledger row. Read-only; never adjusts a quantity, books a journal entry, or posts a stock reconciliation.",
       "doctypes_required": [
@@ -584,7 +584,7 @@
       "title": "Reorder & Replenishment Operator",
       "domain": "inventory",
       "nature": "operator",
-      "status": "Published",
+      "status": "Coming Soon",
       "version": "0.1.0",
       "description": "Watches stock position daily and works the replenishment tail: for each item whose velocity- and lead-time-aware reorder point is breached and is not already covered by open supply, it stages a docstatus-0 draft Material Request with a computed reorder qty, target warehouse and required-by date; where demand is ambiguous (no history, erratic, or slow/dead) it raises one evidence-carrying Approval Request instead of guessing. Proposes only; a human confirms and submits every request.",
       "doctypes_required": [
@@ -618,7 +618,7 @@
       "title": "SLA-Breach & Ticket-Ageing Auditor",
       "domain": "helpdesk",
       "nature": "auditor",
-      "status": "Published",
+      "status": "Coming Soon",
       "version": "0.2.0",
       "description": "A scheduled, reproducible queue-health sweep for Frappe Helpdesk. Reads each ticket's already-stored SLA state and folds breached, about-to-breach, unassigned, unacknowledged, reopened and stalled tickets into one de-duplicated, severity-ranked worklist, hyperlinked to each ticket with the deadline it missed and its age. Read-only; never reassigns, replies, re-prioritises, or closes a ticket.",
       "doctypes_required": [
@@ -658,7 +658,7 @@
       "title": "Statutory Payroll Deposit-Status Extension (auditor)",
       "domain": "hrms-payroll",
       "nature": "auditor",
-      "status": "Published",
+      "status": "Coming Soon",
       "version": "0.2.1",
       "description": "Extends the Statutory Payroll auditor onto your own recorded PF/ESI deposit bookings: it reads the Journal Entry or Payment Entry you post against your PF/ESI liability account and reports whether that booking is dated on or before the effective-dated deposit due date. Installable only where ERPNext and HRMS are present. Read-only; reports a booked-liability date only, never that a deposit reached EPFO/ESIC, and never books, edits, or deposits. Custom challan doctypes and portal receipts are not read here; they enter as a declared import artifact.",
       "doctypes_required": [
@@ -698,7 +698,7 @@
       "title": "TDS/TCS Data-Prep Worklist (auditor)",
       "domain": "tds-compliance",
       "nature": "auditor",
-      "status": "Published",
+      "status": "Coming Soon",
       "version": "0.2.1",
       "description": "Prepares your monthly TDS/TCS data before each deposit due date and before each 26Q/24Q quarter: reconciles the TDS booked in your ledger against the challan payments recorded in your books, tracks each supplier's running total against the section thresholds, checks the rate deducted against the effective section rate, and lists the deductee fields your return is missing. Read-only worklist; never edits a voucher, books TDS, deposits a challan, files a return, or decides what is legally deductible.",
       "doctypes_required": [
@@ -768,4 +768,3 @@
     }
   ]
 }
-
