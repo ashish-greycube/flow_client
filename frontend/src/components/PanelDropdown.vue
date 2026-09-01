@@ -43,8 +43,8 @@ function select(item) {
 }
 
 // Keep the menu inside the panel: open aligned to the trigger, then shift it
-// horizontally if either edge would spill past #flow-root. Measured once per
-// open (a click) — no resize/scroll listeners.
+// horizontally if either edge would spill past the panel's own bounds.
+// Measured once per open (a click) — no resize/scroll listeners.
 watch(open, async (v) => {
 	shift.value = 0;
 	if (!v) {
@@ -52,7 +52,14 @@ watch(open, async (v) => {
 		return;
 	}
 	await nextTick();
-	const panel = document.getElementById("flow-root");
+	// `.closest(".flow-panel")`, not `#flow-root`: `#flow-root` is the mount
+	// target both the widget and the full chat page render into, but for the
+	// widget it's an unstyled pass-through div — the actual sized/positioned
+	// box is a Vue-rendered child (`.flow-widget-anchor`/`.flow-widget-popup`),
+	// so `#flow-root` itself has a collapsed (zero) bounding box there and
+	// sends this shift math flying off-screen. `.flow-panel` is the one class
+	// that's the real, properly-sized visual container in both places.
+	const panel = menu.value?.closest(".flow-panel");
 	if (!menu.value || !panel) return;
 	const m = menu.value.getBoundingClientRect();
 	const p = panel.getBoundingClientRect();

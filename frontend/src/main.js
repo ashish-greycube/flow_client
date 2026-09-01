@@ -1,106 +1,38 @@
 import { createApp, watch } from "vue";
 import App from "@/App.vue";
 import { useStore } from "@/store";
-import { readPanelState, writePanelState } from "@/lib/panelState";
+import { writePanelState } from "@/lib/panelState";
 import "@/index.css";
 
-const PANEL_WIDTH = 420;
-const MIN_WIDTH = 360;
-
-// Slide-in overlay panel injected into the Frappe desk. The Vue app (with real
-// frappe-ui components) mounts inside #flow-root; all bundle CSS is scoped to
-// that id so nothing leaks onto the desk.
-class FlowPanel {
+// Floating chat widget injected into every desk page: a launcher button that
+// toggles a small popup (App.vue), with a "Full chat" link out to the
+// full-page Flow Chat (flow/flow/page/flow_chat). Replaces the old full-height
+// slide-in panel — Ctrl+I still toggles the popup as a shortcut.
+class FlowWidget {
 	constructor() {
-		const saved = readPanelState();
-		this.visible = Boolean(saved.open);
-		this._halfWidth = saved.width || PANEL_WIDTH;
-		// Fullscreen is the default mode; a saved preference wins on reload.
-		this._initialFullscreen = saved.fullscreen ?? true;
-
 		this._mount();
 		this._syncTheme();
 		this._registerShortcut();
+		this._hideOnFullChatPage();
 
 		watch(this.store.sessionName, () => this._persist());
 	}
 
-	get fullscreen() {
-		return this.store.fullscreen.value;
-	}
-
 	_mount() {
 		this.store = useStore();
-		this.store.fullscreen.value = this._initialFullscreen;
 
 		this.root = document.createElement("div");
 		this.root.id = "flow-root";
-		Object.assign(this.root.style, {
-			position: "fixed",
-			top: "0",
-			right: "0",
-			width: this.fullscreen ? "100vw" : `${this._halfWidth}px`,
-			height: "100vh",
-			zIndex: "1040",
-			// A restored-open panel renders in place (no slide) so a refresh is seamless.
-			transform: this.visible ? "translateX(0)" : "translateX(100%)",
-			transition: "transform 0.22s ease",
-			boxShadow: "-2px 0 16px rgba(0, 0, 0, 0.08)",
-		});
 		document.body.appendChild(this.root);
 
-		this.app = createApp(App, {
-			onClose: () => this.hide(),
-			onToggleFullscreen: () => this.toggleFullscreen(),
-		});
-		this.app.mount(this.root);
-
-		this._addResizeHandle();
+		this.app = createApp(App, { onOpenFullChat: () => this.openFullChat() });
+		// The mounted instance exposes show/hide/toggle (via defineExpose) — the
+		// bridge between this plain controller class and the component's own
+		// reactive `visible` state.
+		this.vm = this.app.mount(this.root);
 	}
 
-	// Thin grab strip on the panel's left edge. Dragging it changes the panel
-	// width (anchored to the right). Appended after mount so Vue's render
-	// doesn't clobber it.
-	_addResizeHandle() {
-		const handle = document.createElement("div");
-		Object.assign(handle.style, {
-			position: "absolute",
-			top: "0",
-			left: "0",
-			width: "6px",
-			height: "100%",
-			cursor: "ew-resize",
-			zIndex: "10",
-		});
-		this.root.appendChild(handle);
-
-		const onMove = (e) => {
-			const max = window.innerWidth - 80;
-			const width = Math.min(max, Math.max(MIN_WIDTH, window.innerWidth - e.clientX));
-			this.root.style.width = `${width}px`;
-			this._halfWidth = width;
-			// A manual resize takes the panel out of fullscreen; keep the header icon honest.
-			this.store.fullscreen.value = false;
-		};
-		const onUp = () => {
-			document.removeEventListener("mousemove", onMove);
-			document.removeEventListener("mouseup", onUp);
-			document.body.style.userSelect = "";
-			this.root.style.transition = this._savedTransition;
-			this._persist();
-		};
-		handle.addEventListener("mousedown", (e) => {
-			e.preventDefault();
-			// Drop the width transition while dragging so it tracks the cursor.
-			this._savedTransition = this.root.style.transition;
-			this.root.style.transition = "none";
-			document.body.style.userSelect = "none";
-			document.addEventListener("mousemove", onMove);
-			document.addEventListener("mouseup", onUp);
-		});
-	}
-
-	// Mirror the desk's light/dark theme onto the panel root so scoped tokens
+	// Mirror the desk's light/dark theme onto the widget root so scoped tokens
 	// resolve to the right palette.
 	_syncTheme() {
 		const apply = () => {
@@ -117,49 +49,54 @@ class FlowPanel {
 	_registerShortcut() {
 		frappe.ui.keys.add_shortcut({
 			shortcut: "ctrl+i",
-			action: () => this.toggle(),
-			description: __("Toggle Flow panel"),
+			action: () => this.vm.toggle(),
+			description: __("Toggle Flow chat widget"),
 			ignore_inputs: true,
 		});
 	}
 
-	show() {
-		this.visible = true;
-		this.root.style.transform = "translateX(0)";
-		this.store.restoreSession();
-		this._persist();
+	openFullChat() {
+		this.vm.hide();
+		frappe.set_route("flow-chat");
 	}
 
-	hide() {
-		this.visible = false;
-		this.root.style.transform = "translateX(100%)";
-		this._persist();
-	}
-
-	toggle() {
-		this.visible ? this.hide() : this.show();
-	}
-
-	// Expand to the full viewport width, or restore the half-screen width. State
-	// lives in the store so the header icon tracks it reactively.
-	toggleFullscreen() {
-		const next = !this.fullscreen;
-		this.store.fullscreen.value = next;
-		this.root.style.width = next ? "100vw" : `${this._halfWidth}px`;
-		this._persist();
+	// Detach the widget entirely while the full-page Flow Chat is already open —
+	// a floating "chat with Flow" bubble on top of that page would just be a
+	// redundant second entry point to the same thing. This removes #flow-root
+	// from the DOM outright rather than just hiding it: the chat page's own
+	// bundle mounts its own #flow-root (same id, for the same shared CSS
+	// scoping — see postcss.config.js), and PanelDropdown.vue's bounds check
+	// does `document.getElementById("flow-root")`, which would otherwise
+	// resolve to whichever of the two elements happens to come first in the
+	// DOM instead of the caller's own container.
+	//
+	// The very first check runs off `window.location.pathname`, not
+	// `frappe.get_route()`: the route is still null when app_ready fires
+	// (routing resolves asynchronously, after app_ready), so checking the
+	// route object here would let the launcher render for one paint before
+	// the later "change" event corrects it — a visible flash on every load of
+	// the chat page. The URL itself is already correct at this point.
+	_hideOnFullChatPage() {
+		const isFullChatPath = () => window.location.pathname.split("/").includes("flow-chat");
+		const sync = (usePathname) => {
+			const onFullChat = usePathname ? isFullChatPath() : (frappe.get_route() || [])[0] === "flow-chat";
+			if (onFullChat) {
+				this.vm.hide();
+				this.root.remove();
+			} else if (!this.root.isConnected) {
+				document.body.appendChild(this.root);
+			}
+		};
+		sync(true);
+		frappe.router.on("change", () => sync(false));
 	}
 
 	_persist() {
-		writePanelState({
-			open: this.visible,
-			fullscreen: this.fullscreen,
-			width: this._halfWidth,
-			session: this.store.sessionName.value,
-		});
+		writePanelState({ session: this.store.sessionName.value });
 	}
 }
 
 frappe.provide("frappe.flow");
 $(document).on("app_ready", () => {
-	frappe.flow.panel = new FlowPanel();
+	frappe.flow.widget = new FlowWidget();
 });

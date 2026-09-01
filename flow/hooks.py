@@ -23,11 +23,10 @@ def _flow_panel_asset(filename: str) -> str:
 	return f"/assets/flow/flow_panel/{filename}?v={version}"
 
 
-# Disabled: the slide-in panel (Ctrl+I) has been replaced by the full-page
-# Flow Chat UI (see flow/flow/page/flow_chat). Re-enable by uncommenting these
-# two lines if the overlay panel is needed again.
-# app_include_js = [_flow_panel_asset("flow_panel.js")]
-# app_include_css = [_flow_panel_asset("flow_panel.css")]
+# Floating chat widget (launcher + popup) shown on every desk page, with a
+# "Full chat" link out to the full-page Flow Chat (flow/flow/page/flow_chat).
+app_include_js = [_flow_panel_asset("flow_panel.js")]
+app_include_css = [_flow_panel_asset("flow_panel.css")]
 
 doc_events = {
 	"Flow Model": {

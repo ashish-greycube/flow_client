@@ -33,7 +33,6 @@ const messages = ref([]);
 const attachments = ref([]);
 const sending = ref(false);
 const loaded = ref(false);
-const fullscreen = ref(false);
 
 // Bumped whenever new content arrives / focus is wanted; views watch & react.
 const scrollTick = ref(0);
@@ -68,8 +67,6 @@ async function loadInitial() {
 		loadToolApproval(selectedAgent.value);
 		loaded.value = true;
 		focusTick.value++;
-
-		if (readPanelState().open) await restoreSession();
 	} catch {
 		// `loaded` stays false, keeping the composer disabled on "Loading…".
 		frappe.show_alert({
@@ -524,7 +521,6 @@ export function useStore() {
 		attachments,
 		sending,
 		loaded,
-		fullscreen,
 		toolApproval,
 		scrollTick,
 		forceScroll,

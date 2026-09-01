@@ -21,6 +21,29 @@
 	font-weight: 400;
 }
 
+/* Floating widget (App.vue): fixed bottom-right stack of [popup, launcher] — a
+   flex column with reversed gap ordering means the popup simply sits above the
+   always-visible launcher without any bottom-offset math. */
+.flow-widget-anchor {
+	position: fixed;
+	right: 24px;
+	bottom: 24px;
+	z-index: 1040;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 12px;
+}
+.flow-widget-popup {
+	width: 384px;
+	height: min(640px, calc(100vh - 120px));
+}
+.flow-widget-launcher {
+	width: 52px;
+	height: 52px;
+	flex-shrink: 0;
+}
+
 /* Even vertical rhythm between an assistant message's blocks (text + tool cards).
    Text carries line-height half-leading that cards don't, so the boundary next
    to a text blob is tightened to keep all visual gaps equal. */

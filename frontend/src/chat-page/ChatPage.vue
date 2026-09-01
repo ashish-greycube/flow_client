@@ -77,7 +77,7 @@ onUnmounted(() => observer?.disconnect());
 				<div class="min-w-0 truncate text-sm font-semibold text-ink-gray-9">
 					{{ sessionTitle }}
 				</div>
-				<div class="relative">
+				<div v-if="canSaveAsMacro" class="relative">
 					<button
 						class="flex items-center gap-1.5 rounded-md border border-outline-gray-2 px-2.5 py-1 text-xs font-medium text-ink-gray-7 hover:bg-surface-gray-2"
 						@click="actionMenuOpen = !actionMenuOpen"
@@ -91,7 +91,6 @@ onUnmounted(() => observer?.disconnect());
 							class="absolute right-0 top-[calc(100%+6px)] z-50 w-64 rounded-xl border border-outline-gray-2 bg-surface-white p-1.5 shadow-2xl"
 						>
 							<button
-								v-if="canSaveAsMacro"
 								class="flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left hover:bg-surface-gray-2"
 								@click="openSaveAsMacro"
 							>
@@ -105,16 +104,18 @@ onUnmounted(() => observer?.disconnect());
 									}}</span>
 								</span>
 							</button>
-							<div v-else class="px-2.5 py-2 text-xs text-ink-gray-5">
-								{{ __("Send a message to enable actions.") }}
-							</div>
 						</div>
 					</template>
 				</div>
 			</header>
 
 			<MessageList />
-			<Composer ref="composer">
+			<Composer
+				ref="composer"
+				:disclaimer="
+					__('Flow can make mistakes. Verify important actions before submitting to ERPNext.')
+				"
+			>
 				<template #tools>
 					<button
 						class="flex h-6 items-center gap-1 rounded px-1.5 text-[12.5px] text-ink-gray-6 hover:bg-surface-gray-2"

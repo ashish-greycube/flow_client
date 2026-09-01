@@ -6,6 +6,13 @@ import { Button, FeatherIcon } from "@/lib/ui";
 import { useStore } from "@/store";
 import { __ } from "@/lib/translate";
 
+defineProps({
+	// Optional helper line rendered below the composer box, inside the same
+	// floating footer — e.g. the chat page's "Flow can make mistakes" notice.
+	// Empty by default so the widget popup doesn't grow one unasked.
+	disclaimer: { type: String, default: "" },
+});
+
 const {
 	agents,
 	models,
@@ -108,14 +115,15 @@ watch(focusTick, () => nextTick(() => el.value?.focus()));
 </script>
 
 <template>
-	<div
-		class="flow-composer absolute inset-x-5 bottom-3.5 mx-auto flex max-w-3xl flex-col gap-1.5 rounded-xl border bg-surface-white px-2.5 py-2 shadow-sm transition-[border-color,background-color] focus-within:border-outline-gray-3"
-		:class="dragging ? 'border-outline-gray-4 bg-surface-gray-1' : 'border-outline-gray-2'"
-		@dragover="onDragOver"
-		@dragleave="onDragLeave"
-		@drop="onDrop"
-	>
-		<div v-if="attachments.length" class="flex flex-wrap gap-1.5">
+	<div class="absolute inset-x-5 bottom-3.5 mx-auto flex max-w-3xl flex-col gap-1.5">
+		<div
+			class="flow-composer flex flex-col gap-1.5 rounded-xl border bg-surface-white px-2.5 py-2 shadow-sm transition-[border-color,background-color] focus-within:border-outline-gray-3"
+			:class="dragging ? 'border-outline-gray-4 bg-surface-gray-1' : 'border-outline-gray-2'"
+			@dragover="onDragOver"
+			@dragleave="onDragLeave"
+			@drop="onDrop"
+		>
+			<div v-if="attachments.length" class="flex flex-wrap gap-1.5">
 			<AttachmentChip
 				v-for="a in attachments"
 				:key="a.uid"
@@ -232,5 +240,8 @@ watch(focusTick, () => nextTick(() => el.value?.focus()));
 				<template #icon><FeatherIcon name="arrow-up" class="h-4 w-4" /></template>
 			</Button>
 		</div>
+		</div>
+
+		<p v-if="disclaimer" class="text-center text-[11px] text-ink-gray-4">{{ disclaimer }}</p>
 	</div>
 </template>
