@@ -1,0 +1,41 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_basics", "macro_name", "enabled", "description", "column_basics", "agent", "stop_on_error", "auto_approve",
+  "section_steps", "steps",
+  "section_schedule", "schedule_enabled", "schedule_frequency", "column_schedule", "schedule_time", "last_run_at", "next_run_at"
+ ],
+ "fields": [
+  {"fieldname":"section_basics","fieldtype":"Section Break","label":"Macro Details"},
+  {"fieldname":"macro_name","fieldtype":"Data","label":"Macro Name","reqd":1,"in_list_view":1},
+  {"default":"1","fieldname":"enabled","fieldtype":"Check","label":"Enabled","in_list_view":1,"in_standard_filter":1,"description":"Disabled macros cannot be started and are skipped by the scheduler."},
+  {"fieldname":"description","fieldtype":"Small Text","label":"Description","description":"Short explanation of the reusable workflow."},
+  {"fieldname":"column_basics","fieldtype":"Column Break"},
+  {"fieldname":"agent","fieldtype":"Link","label":"Agent","options":"Flow Agent","reqd":1,"in_list_view":1,"in_standard_filter":1,"description":"Every step runs through this Flow Agent and only its assigned tools and knowledge bases."},
+  {"default":"1","fieldname":"stop_on_error","fieldtype":"Check","label":"Stop on Error","description":"Stop the macro when a step fails. When disabled, the next step is attempted."},
+  {"default":"0","fieldname":"auto_approve","fieldtype":"Check","label":"Auto Approve Tool Calls","description":"System Manager only. Allows confirmation-required tools to run unattended. Tool permissions still apply to the macro owner."},
+  {"fieldname":"section_steps","fieldtype":"Section Break","label":"Steps"},
+  {"fieldname":"steps","fieldtype":"Table","label":"Steps","options":"Flow Macro Step","reqd":1,"description":"Ordered prompts. Each prompt is a separate turn in the same Flow Session."},
+  {"fieldname":"section_schedule","fieldtype":"Section Break","label":"Schedule"},
+  {"default":"0","fieldname":"schedule_enabled","fieldtype":"Check","label":"Run on a Schedule"},
+  {"default":"Daily","depends_on":"eval:doc.schedule_enabled","fieldname":"schedule_frequency","fieldtype":"Select","label":"Frequency","options":"Daily\nWeekly\nMonthly"},
+  {"fieldname":"column_schedule","fieldtype":"Column Break"},
+  {"depends_on":"eval:doc.schedule_enabled","fieldname":"schedule_time","fieldtype":"Time","label":"Time of Day","description":"Site-local time. Defaults to 09:00."},
+  {"fieldname":"last_run_at","fieldtype":"Datetime","label":"Last Scheduled Run At","read_only":1},
+  {"fieldname":"next_run_at","fieldtype":"Datetime","label":"Next Run At","read_only":1}
+ ],
+ "links": [{"group":"Runs","link_doctype":"Flow Macro Run","link_fieldname":"macro"}],
+ "module": "Flow",
+ "name": "Flow Macro",
+ "permissions": [
+  {"create":1,"delete":1,"if_owner":1,"print":1,"read":1,"report":1,"role":"All","write":1},
+  {"read":1,"report":1,"role":"System Manager"}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "macro_name",
+ "track_changes": 1
+}

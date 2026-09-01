@@ -27,6 +27,9 @@ app_include_js = [_flow_panel_asset("flow_panel.js")]
 app_include_css = [_flow_panel_asset("flow_panel.css")]
 
 doc_events = {
+	"Flow Model": {
+		"after_insert": "flow.fac_tools.prebuilt_agents.sync_after_model_insert",
+	},
 	"*": {
 		"after_insert": "flow.triggers.dispatch",
 		"on_update": "flow.triggers.dispatch",
@@ -36,11 +39,21 @@ doc_events = {
 	}
 }
 
+permission_query_conditions = {
+	"Flow Macro": "flow.macros.permissions.macro_query_conditions",
+	"Flow Macro Run": "flow.macros.permissions.macro_run_query_conditions",
+}
+
+has_permission = {
+	"Flow Macro": "flow.macros.permissions.has_macro_permission",
+	"Flow Macro Run": "flow.macros.permissions.has_macro_run_permission",
+}
+
 # Flow's references to other docs are bookkeeping — they must never block deleting
 # the referenced doc. A knowledge chunk indexes a doc; a Flow Run records the doc a
 # trigger acted on. The incremental sweep removes orphaned chunks afterwards.
 # A session's Flow Model reference is historical bookkeeping and must not block deletion.
-ignore_links_on_delete = ["Flow Knowledge Chunk", "Flow Run", "Flow Session"]
+ignore_links_on_delete = ["Flow Knowledge Chunk", "Flow Macro Run", "Flow Run", "Flow Session"]
 
 default_log_clearing_doctypes = {
 	"Flow Session": 90,
@@ -53,6 +66,7 @@ scheduler_events = {
 	"cron": {
 		"*/5 * * * *": [
 			"flow.triggers.dispatch_scheduled",
+			"flow.macros.executor.run_due_macros",
 		],
 	},
 }

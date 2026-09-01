@@ -1,0 +1,15 @@
+{
+ "doctype":"DocType",
+ "engine":"InnoDB",
+ "istable":1,
+ "field_order":["label","prompt","section_execution","model_override"],
+ "fields":[
+  {"fieldname":"label","fieldtype":"Data","label":"Label","in_list_view":1,"description":"Optional progress label for this step."},
+  {"fieldname":"prompt","fieldtype":"Small Text","label":"Prompt","reqd":1,"in_list_view":1,"description":"Instruction sent to the selected Flow Agent."},
+  {"fieldname":"section_execution","fieldtype":"Section Break","label":"Execution Override"},
+  {"fieldname":"model_override","fieldtype":"Link","label":"Model Override","options":"Flow Model","description":"Optional model for this step. Empty uses the agent's configured model."}
+ ],
+ "module":"Flow",
+ "name":"Flow Macro Step",
+ "permissions":[]
+}

@@ -38,6 +38,9 @@ def sync_fac_tools() -> None:
 	for advanced_tool in FAC_TOOLS:
 		_sync_tool(advanced_tool)
 	_attach_to_builtin_agent()
+	from flow.fac_tools.prebuilt_agents import sync_prebuilt_agents
+
+	sync_prebuilt_agents()
 
 
 def _sync_tool(advanced_tool: Tool) -> None:

@@ -1,0 +1,194 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:FAR-{YYYY}-{#####}",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "status",
+  "source",
+  "agent",
+  "run",
+  "result_class",
+  "document_type",
+  "session",
+  "question",
+  "context_md",
+  "options",
+  "ref_doctype",
+  "ref_name",
+  "decision",
+  "decided_by",
+  "decided_at",
+  "trace_comment_added"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "permlevel": 1,
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Pending\nApproved\nRejected\nAnswered\nDismissed",
+   "search_index": 1
+  },
+  {
+   "default": "Agent",
+   "description": "Whether this request was created by a prebuilt Flow Agent or from an interactive chat.",
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Source",
+   "options": "Agent\\nChat"
+  },
+  {
+   "description": "The business document type this decision concerns (e.g. Purchase Invoice). Blank = the document type itself is undetermined (Unclassified tab).",
+   "fieldname": "document_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Document Type",
+   "search_index": 1,
+   "options": "DocType"
+  },
+  {
+   "fieldname": "session",
+   "fieldtype": "Link",
+   "label": "Session",
+   "options": "Flow Session",
+   "search_index": 1,
+   "description": "The Flow Session associated with this request, when available."
+  },
+  {
+   "fieldname": "question",
+   "fieldtype": "Small Text",
+   "label": "Question",
+   "reqd": 1
+  },
+  {
+   "description": "Markdown context the approver needs: extracted values, discrepancy notes, what was already checked.",
+   "fieldname": "context_md",
+   "fieldtype": "Long Text",
+   "label": "Context"
+  },
+  {
+   "description": "JSON array of suggested decisions, e.g. [\"Approve as drafted\", \"Reject\"]. Free-text decisions are always allowed.",
+   "fieldname": "options",
+   "fieldtype": "Small Text",
+   "label": "Options (JSON)"
+  },
+  {
+   "fieldname": "ref_doctype",
+   "fieldtype": "Link",
+   "label": "Reference DocType",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "ref_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Reference Name",
+   "options": "ref_doctype"
+  },
+  {
+   "fieldname": "decision",
+   "permlevel": 1,
+   "fieldtype": "Small Text",
+   "label": "Decision"
+  },
+  {
+   "fieldname": "decided_by",
+   "permlevel": 1,
+   "fieldtype": "Link",
+   "label": "Decided By",
+   "options": "User"
+  },
+  {
+   "fieldname": "decided_at",
+   "permlevel": 1,
+   "fieldtype": "Datetime",
+   "label": "Decided At"
+  },
+  {
+   "default": "0",
+   "fieldname": "trace_comment_added",
+   "permlevel": 1,
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Trace Comment Added"
+  },
+  {
+   "fieldname": "agent",
+   "fieldtype": "Link",
+   "label": "Agent",
+   "options": "Flow Agent",
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "description": "The prebuilt Flow Agent that raised this request."
+  },
+  {
+   "fieldname": "run",
+   "fieldtype": "Link",
+   "label": "Run",
+   "options": "Flow Run",
+   "read_only": 1,
+   "description": "The Flow Run that raised this request, when available."
+  },
+  {
+   "fieldname": "result_class",
+   "fieldtype": "Select",
+   "label": "Result Class",
+   "options": "observed_fact\nderived_candidate\nlegal_scenario\nconfirmed_outcome",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "PP-1 \u2014 the value grammar class for an agent-originated, value-bearing request. Blank for a human File-Box/Chat request. Set once, never editable afterwards."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Flow",
+ "name": "Flow Approval Request",
+ "naming_rule": "Expression",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "System Manager",
+   "permlevel": 1,
+   "read": 1,
+   "write": 1
+  },
+  {
+   "role": "All",
+   "if_owner": 1,
+   "read": 1,
+   "write": 1,
+   "create": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "title_field": "title",
+ "search_fields": "title,status,ref_name"
+}

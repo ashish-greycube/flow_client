@@ -1,0 +1,37 @@
+{
+ "actions":[],
+ "autoname":"hash",
+ "doctype":"DocType",
+ "engine":"InnoDB",
+ "field_order":[
+  "section_context","macro","agent","trigger","column_context","session","flow_run",
+  "section_progress","status","current_step","column_progress","total_steps","started_at","finished_at",
+  "section_error","error"
+ ],
+ "fields":[
+  {"fieldname":"section_context","fieldtype":"Section Break","label":"Run Context"},
+  {"fieldname":"macro","fieldtype":"Link","label":"Macro","options":"Flow Macro","reqd":1,"in_list_view":1,"in_standard_filter":1,"read_only":1},
+  {"fieldname":"agent","fieldtype":"Link","label":"Agent","options":"Flow Agent","read_only":1,"in_list_view":1},
+  {"default":"Manual","fieldname":"trigger","fieldtype":"Select","label":"Trigger","options":"Manual\nScheduled","read_only":1,"in_standard_filter":1},
+  {"fieldname":"column_context","fieldtype":"Column Break"},
+  {"fieldname":"session","fieldtype":"Link","label":"Flow Session","options":"Flow Session","read_only":1},
+  {"fieldname":"flow_run","fieldtype":"Link","label":"Current Flow Run","options":"Flow Run","read_only":1},
+  {"fieldname":"section_progress","fieldtype":"Section Break","label":"Progress"},
+  {"default":"Queued","fieldname":"status","fieldtype":"Select","label":"Status","options":"Queued\nRunning\nPaused\nCompleted\nFailed\nStopped","read_only":1,"in_list_view":1,"in_standard_filter":1},
+  {"default":"0","fieldname":"current_step","fieldtype":"Int","label":"Current Step","read_only":1},
+  {"fieldname":"column_progress","fieldtype":"Column Break"},
+  {"default":"0","fieldname":"total_steps","fieldtype":"Int","label":"Total Steps","read_only":1},
+  {"fieldname":"started_at","fieldtype":"Datetime","label":"Started At","read_only":1},
+  {"fieldname":"finished_at","fieldtype":"Datetime","label":"Finished At","read_only":1},
+  {"collapsible":1,"fieldname":"section_error","fieldtype":"Section Break","label":"Error"},
+  {"fieldname":"error","fieldtype":"Long Text","label":"Error","read_only":1}
+ ],
+ "module":"Flow",
+ "name":"Flow Macro Run",
+ "permissions":[
+  {"delete":1,"if_owner":1,"print":1,"read":1,"report":1,"role":"All"},
+  {"read":1,"report":1,"role":"System Manager"}
+ ],
+ "sort_field":"modified",
+ "sort_order":"DESC"
+}

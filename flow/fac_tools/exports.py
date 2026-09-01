@@ -23,11 +23,15 @@ def export_excel(
 	order_by: str | None = None,
 	filename: str | None = None,
 ) -> dict[str, Any]:
-	"""Export permitted DocType records to a private, downloadable Excel file.
+	"""Generate an Excel file from permitted DocType records and give the user a download link.
 
-	This has the same filters, fields, and ordering semantics as Flow's read tool, with
-	a maximum of 5,000 rows. Pass explicit field names for a useful spreadsheet. The
-	result contains file_name, file_url, and row_count; present file_url as a link.
+	Use this when the user asks to export data, download results, or receive an Excel
+	spreadsheet. It has the same filters, fields, and ordering semantics as Flow's read
+	tool, with a maximum of 5,000 rows. Pass explicit field names for a useful export.
+
+	The workbook is stored as a private Frappe File owned by the current user. After this
+	tool succeeds, include the returned `markdown_link` unchanged in the final response.
+	Do not merely print the file path: the user must receive the clickable download link.
 	"""
 	if not frappe.has_permission(doctype, "read"):
 		raise frappe.PermissionError(f"No permission to read {doctype}")
@@ -45,8 +49,32 @@ def export_excel(
 	from frappe.utils.xlsxutils import make_xlsx
 
 	workbook = make_xlsx(data, doctype)
-	file_doc = save_file(f"{_safe_filename(filename or doctype)}.xlsx", workbook.getvalue(), "", "", is_private=1)
-	return {"file_name": file_doc.file_name, "file_url": file_doc.file_url, "row_count": len(rows)}
+	file_doc = save_file(
+		f"{_safe_filename(filename or doctype)}.xlsx",
+		workbook.getvalue(),
+		None,
+		None,
+		is_private=1,
+	)
+	return _file_response(file_doc, len(rows))
+
+
+def _file_response(file_doc, row_count: int) -> dict[str, Any]:
+	download_path = file_doc.unique_url
+	download_url = frappe.utils.get_url(download_path)
+	markdown_link = f"[Download {file_doc.file_name}]({download_url})"
+	return {
+		"success": True,
+		"message": "Excel file created. Show markdown_link to the user as a clickable download link.",
+		"file_id": file_doc.name,
+		"file_name": file_doc.file_name,
+		"file_url": file_doc.file_url,
+		"download_path": download_path,
+		"download_url": download_url,
+		"markdown_link": markdown_link,
+		"row_count": row_count,
+		"is_private": True,
+	}
 
 
 def _validate_fields(meta, fields: list[str]) -> None:
