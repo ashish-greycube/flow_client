@@ -50,6 +50,10 @@ function openSaveAsMacro() {
 	macroDialogOpen.value = true;
 }
 
+function openDesk() {
+	window.open("/app", "_blank");
+}
+
 // The composer floats over the message list, so the list pads its bottom by the
 // composer's live height (--flow-composer-h) — a grown composer (attachments,
 // multiline text) must never cover the last message. Mirrors the slide-in
@@ -77,35 +81,49 @@ onUnmounted(() => observer?.disconnect());
 				<div class="min-w-0 truncate text-sm font-semibold text-ink-gray-9">
 					{{ sessionTitle }}
 				</div>
-				<div v-if="canSaveAsMacro" class="relative">
-					<button
-						class="flex items-center gap-1.5 rounded-md border border-outline-gray-2 px-2.5 py-1 text-xs font-medium text-ink-gray-7 hover:bg-surface-gray-2"
-						@click="actionMenuOpen = !actionMenuOpen"
-					>
-						{{ __("Action") }}
-						<FeatherIcon name="chevron-down" class="h-3 w-3" />
-					</button>
-					<template v-if="actionMenuOpen">
-						<div class="fixed inset-0 z-40" @click="actionMenuOpen = false"></div>
-						<div
-							class="absolute right-0 top-[calc(100%+6px)] z-50 w-64 rounded-xl border border-outline-gray-2 bg-surface-white p-1.5 shadow-2xl"
+				<div class="flex items-center gap-2">
+					<div v-if="canSaveAsMacro" class="relative">
+						<button
+							class="flex items-center gap-1.5 rounded-md border border-outline-gray-2 px-2.5 py-1 text-xs font-medium text-ink-gray-7 hover:bg-surface-gray-2"
+							@click="actionMenuOpen = !actionMenuOpen"
 						>
-							<button
-								class="flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left hover:bg-surface-gray-2"
-								@click="openSaveAsMacro"
+							{{ __("Action") }}
+							<FeatherIcon name="chevron-down" class="h-3 w-3" />
+						</button>
+						<template v-if="actionMenuOpen">
+							<div class="fixed inset-0 z-40" @click="actionMenuOpen = false"></div>
+							<div
+								class="absolute right-0 top-[calc(100%+6px)] z-50 w-64 rounded-xl border border-outline-gray-2 bg-surface-white p-1.5 shadow-2xl"
 							>
-								<FeatherIcon name="layers" class="mt-0.5 h-4 w-4 shrink-0 text-ink-gray-6" />
-								<span>
-									<span class="block text-sm font-medium text-ink-gray-9">{{
-										__("Save as macro")
-									}}</span>
-									<span class="block text-xs text-ink-gray-5">{{
-										__("Reuse these prompts on demand")
-									}}</span>
-								</span>
-							</button>
-						</div>
-					</template>
+								<button
+									class="flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left hover:bg-surface-gray-2"
+									@click="openSaveAsMacro"
+								>
+									<FeatherIcon
+										name="layers"
+										class="mt-0.5 h-4 w-4 shrink-0 text-ink-gray-6"
+									/>
+									<span>
+										<span class="block text-sm font-medium text-ink-gray-9">{{
+											__("Save as macro")
+										}}</span>
+										<span class="block text-xs text-ink-gray-5">{{
+											__("Reuse these prompts on demand")
+										}}</span>
+									</span>
+								</button>
+							</div>
+						</template>
+					</div>
+					<button
+						type="button"
+						class="flex h-7 w-7 items-center justify-center rounded-md border border-outline-gray-2 text-ink-gray-7 hover:bg-surface-gray-2"
+						:title="__('Open ERPNext Desk')"
+						:aria-label="__('Open ERPNext Desk')"
+						@click="openDesk"
+					>
+						<FeatherIcon name="external-link" class="h-3.5 w-3.5" />
+					</button>
 				</div>
 			</header>
 

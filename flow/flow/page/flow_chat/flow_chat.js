@@ -1,4 +1,6 @@
 frappe.pages["flow-chat"].on_page_load = function (wrapper) {
+	ensureImmersiveStyle();
+
 	const page = frappe.ui.make_app_page({
 		parent: wrapper,
 		title: __("Flow Chat"),
@@ -37,3 +39,25 @@ frappe.pages["flow-chat"].on_page_load = function (wrapper) {
 		}
 	);
 };
+
+function ensureImmersiveStyle() {
+	if (document.getElementById("flow-chat-immersive-style")) return;
+
+	const style = document.createElement("style");
+	style.id = "flow-chat-immersive-style";
+	style.textContent = `
+		body[data-route^="flow-chat"] header.navbar,
+		body[data-route^="flow-chat"] .navbar,
+		body[data-route^="flow-chat"] .page-head,
+		body[data-route^="flow-chat"] .body-sidebar-container {
+			display: none !important;
+		}
+		body[data-route^="flow-chat"] .main-section {
+			padding-top: 0 !important;
+		}
+		body[data-route^="flow-chat"] .page-body {
+			margin-top: 0 !important;
+		}
+	`;
+	document.head.appendChild(style);
+}

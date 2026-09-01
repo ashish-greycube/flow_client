@@ -41,14 +41,17 @@ async function save() {
 	if (!canSave.value) return;
 	saving.value = true;
 	try {
-		const { name: created } = await createMacroFromPrompts(
+		const macroName = name.value.trim();
+		await createMacroFromPrompts(
 			props.agent,
-			name.value.trim(),
+			macroName,
 			props.steps
 		);
 		emit("update:modelValue", false);
-		frappe.show_alert({ message: __("Macro created."), indicator: "green" });
-		frappe.set_route("Form", "Flow Macro", created);
+		frappe.show_alert({
+			message: __("Macro {0} created.", [macroName]),
+			indicator: "green",
+		});
 	} catch (e) {
 		frappe.show_alert({ message: e.message || __("Could not create macro."), indicator: "red" });
 	} finally {
