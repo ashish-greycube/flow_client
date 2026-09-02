@@ -225,6 +225,10 @@ body[data-route^="flow-guide"] .layout-main-section {
 	background: var(--card-bg);
 }
 
+.flow-guide-card:nth-child(even) {
+	background: #faf9f6;
+}
+
 .flow-guide-card-icon {
 	display: flex;
 	align-items: center;

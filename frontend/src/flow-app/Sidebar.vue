@@ -169,19 +169,6 @@ function readCollapsed() {
 				class="flex h-[30px] w-full items-center rounded text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
 				:class="[
 					collapsed ? 'justify-center px-1' : 'gap-2 px-2',
-					route.path.startsWith('/knowledge-bases') ? 'bg-surface-selected shadow-sm' : '',
-				]"
-				:title="collapsed ? __('Knowledge Base') : undefined"
-				:aria-label="__('Knowledge Base')"
-				@click="openKnowledgeBases"
-			>
-				<FeatherIcon name="book-open" class="h-4 w-4 shrink-0" />
-				<span v-if="!collapsed">{{ __("Knowledge Base") }}</span>
-			</button>
-			<button
-				class="flex h-[30px] w-full items-center rounded text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
-				:class="[
-					collapsed ? 'justify-center px-1' : 'gap-2 px-2',
 					route.path.startsWith('/trigger') ? 'bg-surface-selected shadow-sm' : '',
 				]"
 				:title="collapsed ? __('Triggers') : undefined"
@@ -190,6 +177,21 @@ function readCollapsed() {
 			>
 				<FeatherIcon name="zap" class="h-4 w-4 shrink-0" />
 				<span v-if="!collapsed">{{ __("Triggers") }}</span>
+			</button>
+			<button
+				class="flex h-[30px] w-full items-center rounded text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
+				:class="[
+					collapsed ? 'justify-center px-1' : 'gap-2 px-2',
+					route.path.startsWith('/knowledge-bases')
+						? 'bg-surface-selected shadow-sm'
+						: '',
+				]"
+				:title="collapsed ? __('Knowledge Base') : undefined"
+				:aria-label="__('Knowledge Base')"
+				@click="openKnowledgeBases"
+			>
+				<FeatherIcon name="book-open" class="h-4 w-4 shrink-0" />
+				<span v-if="!collapsed">{{ __("Knowledge Base") }}</span>
 			</button>
 		</nav>
 
