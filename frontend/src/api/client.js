@@ -33,6 +33,22 @@ export const loadModels = () =>
 		limit_page_length: 50,
 	});
 
+export const loadTools = () =>
+	getList("Flow Tool", {
+		filters: { enabled: 1 },
+		fields: ["name", "title"],
+		order_by: "title asc",
+		limit_page_length: 500,
+	});
+
+export const loadKnowledgeBases = () =>
+	getList("Flow Knowledge Base", {
+		filters: { enabled: 1 },
+		fields: ["name", "title"],
+		order_by: "title asc",
+		limit_page_length: 500,
+	});
+
 // Full CRUD for the Agents page's create/edit dialog — plain frappe.client
 // calls (the same generic whitelisted methods this file already uses
 // elsewhere), so no new server-side endpoint is needed.
@@ -41,17 +57,20 @@ export const getAgent = (name) => frappe.xcall("frappe.client.get", { doctype: "
 export const createAgent = (values) =>
 	frappe.xcall("frappe.client.insert", { doc: { doctype: "Flow Agent", ...values } });
 
-// `fieldname` as a dict of {field: value} updates every key in one call.
-// Title is deliberately never included here — Flow Agent is `autoname:
-// "field:title"`, so the title field is locked in sync with the docname on
-// every save (Document._sync_autoname_field) and silently reverts any other
-// value written to it this way. Changing the title has to go through an
-// actual rename (renameAgent below), which updates the docname and the
-// field together.
-export const updateAgent = (name, values) =>
-	frappe.xcall("frappe.client.set_value", { doctype: "Flow Agent", name, fieldname: values });
+// `frappe.client.set_value` can't touch table fields ("Cannot edit standard
+// fields" aside, it never rebuilds child rows), which the Tools/Knowledge
+// Bases fields need — so updates go through `frappe.client.save` instead,
+// same as a Desk form's Save button. That means `doc` must carry the FULL
+// document state (frappe.get_doc(dict) builds the doc from exactly what's
+// given, it does not merge onto the existing DB row), not just the changed
+// fields — the caller is responsible for including every field it cares
+// about (is_system_generated included, or a save would silently clear it).
+// Title is still never the thing that changes docname here — Flow Agent is
+// `autoname: "field:title"`, so an actual rename (renameAgent below) has to
+// happen first when the title changed.
+export const saveAgent = (doc) => frappe.xcall("frappe.client.save", { doc: { doctype: "Flow Agent", ...doc } });
 
-// Renames the document (Flow Agent's title IS its name — see updateAgent's
+// Renames the document (Flow Agent's title IS its name — see saveAgent's
 // note). Returns the name actually used, which can differ slightly from
 // `newTitle` if it needed sanitizing.
 export const renameAgent = (oldName, newTitle) =>
@@ -59,6 +78,88 @@ export const renameAgent = (oldName, newTitle) =>
 		doctype: "Flow Agent",
 		old_name: oldName,
 		new_name: newTitle,
+	});
+
+// Full catalog for the Knowledge Base page — every knowledge base regardless
+// of enabled state, with the fields needed for its card.
+export const loadAllKnowledgeBases = () =>
+	getList("Flow Knowledge Base", {
+		fields: ["name", "title", "enabled", "is_system_generated", "description"],
+		order_by: "title asc",
+		limit_page_length: 500,
+	});
+
+export const getKnowledgeBase = (name) =>
+	frappe.xcall("frappe.client.get", { doctype: "Flow Knowledge Base", name });
+
+export const createKnowledgeBase = (values) =>
+	frappe.xcall("frappe.client.insert", { doc: { doctype: "Flow Knowledge Base", ...values } });
+
+export const saveKnowledgeBase = (doc) =>
+	frappe.xcall("frappe.client.save", { doc: { doctype: "Flow Knowledge Base", ...doc } });
+
+export const renameKnowledgeBase = (oldName, newTitle) =>
+	frappe.xcall("frappe.client.rename_doc", {
+		doctype: "Flow Knowledge Base",
+		old_name: oldName,
+		new_name: newTitle,
+	});
+
+// Sources linked to one knowledge base (the Desk form's "Connections" tab
+// equivalent — Flow Knowledge Source has no doctype of its own field back
+// onto Flow Knowledge Base besides this `knowledge_base` Link).
+export const loadKnowledgeSources = (knowledgeBase) =>
+	getList("Flow Knowledge Source", {
+		filters: { knowledge_base: knowledgeBase },
+		fields: [
+			"name",
+			"title",
+			"source_type",
+			"status",
+			"chunk_count",
+			"is_system_generated",
+			"modified",
+		],
+		order_by: "creation desc",
+		limit_page_length: 500,
+	});
+
+export const getKnowledgeSource = (name) =>
+	frappe.xcall("frappe.client.get", { doctype: "Flow Knowledge Source", name });
+
+export const createKnowledgeSource = (values) =>
+	frappe.xcall("frappe.client.insert", { doc: { doctype: "Flow Knowledge Source", ...values } });
+
+export const saveKnowledgeSource = (doc) =>
+	frappe.xcall("frappe.client.save", { doc: { doctype: "Flow Knowledge Source", ...doc } });
+
+export const deleteKnowledgeSource = (name) =>
+	frappe.xcall("frappe.client.delete", { doctype: "Flow Knowledge Source", name });
+
+// Flow Knowledge Source's `resync`/`reconcile` are plain whitelisted Document
+// methods (flow_knowledge_source.py) — called the same generic way Desk's own
+// `frm.call()` does (frappe/public/js/frappe/form/controls/button.js), rather
+// than adding a dedicated endpoint for each.
+export const resyncKnowledgeSource = (name, rebuild = false) =>
+	frappe.xcall("run_doc_method", {
+		dt: "Flow Knowledge Source",
+		dn: name,
+		method: "resync",
+		args: { rebuild: rebuild ? 1 : 0 },
+	});
+
+export const reconcileKnowledgeSource = (name) =>
+	frappe.xcall("run_doc_method", { dt: "Flow Knowledge Source", dn: name, method: "reconcile" });
+
+// For the "Reference DocType" picker (DocType-source knowledge sources) — every
+// non-child doctype, the same universe Desk's own Link field for `options:
+// "DocType"` searches against.
+export const loadReferenceDoctypes = () =>
+	getList("DocType", {
+		filters: { istable: 0 },
+		fields: ["name"],
+		order_by: "name asc",
+		limit_page_length: 5000,
 	});
 
 export const loadHistory = () =>

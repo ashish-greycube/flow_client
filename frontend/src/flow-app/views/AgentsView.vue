@@ -10,8 +10,8 @@ const router = useRouter();
 
 // Flow has no marketplace/catalog concept (installs, versions, publishers)
 // like Jarvis's Agents page does — these tabs map onto what a Flow Agent
-// actually has: "Featured" is the built-in, curated agents (is_system_generated),
-// the other two are just its `enabled` flag.
+// actually has: "Featured" is every agent regardless of enabled/disabled/
+// system-generated, the other two filter by its `enabled` flag.
 const TABS = [
 	{ key: "featured", label: __("Featured") },
 	{ key: "enabled", label: __("Enabled") },
@@ -35,7 +35,7 @@ onMounted(async () => {
 });
 
 const tabbed = computed(() => {
-	if (activeTab.value === "featured") return agents.value.filter((a) => a.is_system_generated);
+	if (activeTab.value === "featured") return agents.value;
 	if (activeTab.value === "enabled") return agents.value.filter((a) => a.enabled);
 	return agents.value.filter((a) => !a.enabled);
 });
@@ -50,7 +50,7 @@ const filtered = computed(() => {
 });
 
 function tabCount(key) {
-	if (key === "featured") return agents.value.filter((a) => a.is_system_generated).length;
+	if (key === "featured") return agents.value.length;
 	if (key === "enabled") return agents.value.filter((a) => a.enabled).length;
 	return agents.value.filter((a) => !a.enabled).length;
 }
