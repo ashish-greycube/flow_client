@@ -2,13 +2,17 @@
 import { ref, reactive, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import PanelDropdown from "@/components/PanelDropdown.vue";
-import { Button, FeatherIcon, Spinner } from "@/lib/ui";
+import DocSection from "@/components/DocSection.vue";
+import { Button, FeatherIcon, Spinner, Badge, TextInput, Textarea, Switch, Breadcrumbs } from "@/lib/ui";
 import { __ } from "@/lib/translate";
 import { loadModels, getAgent, createAgent, updateAgent, renameAgent } from "@/api/client";
 
 // Full page for both Create and Edit (routed at /agents/new and
 // /agents/:name) — a dialog previously covered this, but a page keeps the
 // sidebar visible and gives each agent its own real, bookmarkable URL.
+// Styled after Jarvis's Macro new/edit page (frontend/src/pages/macros/
+// MacroDetail.vue): breadcrumbs + actions header, a title row with a "Not
+// Saved" badge, and fields grouped under a "Details" section.
 const route = useRoute();
 const router = useRouter();
 
@@ -31,11 +35,43 @@ const form = reactive({
 	instructions: "",
 	enabled: true,
 });
+// Saved-state copy for the dirty compare, set once load() settles.
+const snapshot = ref(null);
 
 const modelItems = computed(() => models.value.map((m) => ({ value: m.name, label: m.title })));
 const canSave = computed(
 	() => form.title.trim() && form.model && form.instructions.trim() && !saving.value
 );
+
+const dirty = computed(() => {
+	const snap = snapshot.value;
+	if (!snap || loading.value) return false;
+	return (
+		(form.title || "") !== snap.title ||
+		(form.model || null) !== snap.model ||
+		(form.instructions || "") !== snap.instructions ||
+		(form.enabled ? 1 : 0) !== snap.enabled
+	);
+});
+
+const pageTitle = computed(() =>
+	isEdit.value ? form.title || agentName.value : form.title || __("New Agent")
+);
+const breadcrumbs = computed(() => [
+	{ label: __("Agents"), route: { name: "agents" } },
+	isEdit.value
+		? { label: pageTitle.value, route: { name: "agent-edit", params: { name: agentName.value } } }
+		: { label: __("New Agent"), route: { name: "agent-new" } },
+]);
+
+function snapshotForm() {
+	snapshot.value = {
+		title: form.title,
+		model: form.model,
+		instructions: form.instructions,
+		enabled: form.enabled ? 1 : 0,
+	};
+}
 
 async function load() {
 	models.value = await loadModels().catch(() => []);
@@ -52,6 +88,7 @@ async function load() {
 		} catch (e) {
 			frappe.show_alert({ message: e.message || __("Could not load agent."), indicator: "red" });
 			goBack();
+			return;
 		} finally {
 			loading.value = false;
 		}
@@ -61,6 +98,7 @@ async function load() {
 		form.instructions = "";
 		form.enabled = true;
 	}
+	snapshotForm();
 }
 onMounted(load);
 
@@ -99,27 +137,15 @@ async function save() {
 		saving.value = false;
 	}
 }
-
 </script>
 
 <template>
 	<div class="relative flex min-w-0 flex-1 flex-col bg-surface-white text-ink-gray-9">
 		<header class="flex items-center justify-between border-b border-outline-gray-1 px-6 py-4">
-			<div class="flex items-center gap-2">
-				<button
-					class="flex h-7 w-7 items-center justify-center rounded-md text-ink-gray-6 hover:bg-surface-gray-2"
-					:title="__('Back to Agents')"
-					@click="goBack"
-				>
-					<FeatherIcon name="arrow-left" class="h-4 w-4" />
-				</button>
-				<h1 class="text-lg font-normal text-ink-gray-9">
-					{{ isEdit ? __("Edit Agent") : __("New Agent") }}
-				</h1>
-			</div>
+			<Breadcrumbs :items="breadcrumbs" />
 			<div class="flex items-center gap-2">
 				<Button variant="subtle" :disabled="saving" @click="goBack">{{ __("Cancel") }}</Button>
-				<Button variant="solid" :disabled="!canSave" :loading="saving" @click="save">{{
+				<Button variant="solid" :disabled="!canSave || !dirty" :loading="saving" @click="save">{{
 					isEdit ? __("Save") : __("Create Agent")
 				}}</Button>
 			</div>
@@ -130,60 +156,88 @@ async function save() {
 		</div>
 
 		<div v-else class="flow-scrollbar flex-1 overflow-y-auto px-6 py-6">
-			<div class="mx-auto flex max-w-3xl flex-col gap-4">
-				<div>
-					<label class="mb-1 block text-xs text-ink-gray-6">{{ __("Title") }}</label>
-					<input
-						v-model="form.title"
-						type="text"
-						:disabled="isSystemGenerated"
-						:placeholder="__('e.g. Sales Analysis Agent')"
-						class="h-8 w-full rounded-md border border-outline-gray-2 bg-surface-white px-2.5 text-sm text-ink-gray-9 outline-none focus:border-outline-gray-3 disabled:bg-surface-gray-1 disabled:text-ink-gray-5"
-					/>
-					<p v-if="isSystemGenerated" class="mt-1 text-xs text-ink-gray-5">
-						{{ __("Built-in agents can't be renamed.") }}
-					</p>
+			<div class="mx-auto max-w-3xl">
+				<div class="flex items-center gap-3">
+					<h1 class="min-w-0 truncate text-2xl font-semibold text-ink-gray-9">
+						{{ pageTitle }}
+					</h1>
+					<Badge v-if="dirty" variant="subtle" theme="orange" :label="__('Not Saved')" />
 				</div>
 
-				<div>
-					<label class="mb-1 block text-xs text-ink-gray-6">{{ __("Model") }}</label>
-					<PanelDropdown
-						:items="modelItems"
-						:model-value="form.model"
-						placement="bottom"
-						searchable
-						@update:model-value="(v) => (form.model = v)"
-					>
-						<template #trigger="{ toggle }">
-							<button
-								class="flex h-8 w-full items-center justify-between rounded-md border border-outline-gray-2 px-2.5 text-left text-sm text-ink-gray-9 hover:bg-surface-gray-2"
-								@click="toggle"
-							>
-								<span class="truncate">{{
-									modelItems.find((m) => m.value === form.model)?.label ||
-									__("Select a model")
-								}}</span>
-								<FeatherIcon name="chevron-down" class="h-3.5 w-3.5 shrink-0 text-ink-gray-5" />
-							</button>
-						</template>
-					</PanelDropdown>
-				</div>
+				<div class="mt-4">
+					<DocSection :label="__('Details')" :collapsible="false">
+						<div class="space-y-4">
+							<TextInput
+								type="text"
+								:label="__('Title')"
+								:placeholder="__('e.g. Sales Analysis Agent')"
+								:model-value="form.title"
+								:disabled="isSystemGenerated || saving"
+								:description="isSystemGenerated ? __('Built-in agents can\'t be renamed.') : ''"
+								@update:model-value="(v) => (form.title = v)"
+							/>
 
-				<div>
-					<label class="mb-1 block text-xs text-ink-gray-6">{{ __("Instructions") }}</label>
-					<textarea
-						v-model="form.instructions"
-						rows="12"
-						:placeholder="__('What should this agent do? Describe its role, scope, and rules.')"
-						class="w-full resize-none rounded-md border border-outline-gray-2 bg-surface-white px-2.5 py-2 text-sm text-ink-gray-9 outline-none focus:border-outline-gray-3"
-					></textarea>
-				</div>
+							<div>
+								<label class="mb-1.5 block text-xs text-ink-gray-5">{{ __("Model") }}</label>
+								<PanelDropdown
+									:items="modelItems"
+									:model-value="form.model"
+									:disabled="saving"
+									placement="bottom"
+									searchable
+									match-trigger-width
+									@update:model-value="(v) => (form.model = v)"
+								>
+									<template #trigger="{ toggle }">
+										<button
+											class="flex h-8 w-full items-center justify-between rounded-md border border-outline-gray-2 px-2.5 text-left text-sm font-normal text-ink-gray-9 hover:bg-surface-gray-2"
+											@click="toggle"
+										>
+											<span class="truncate">{{
+												modelItems.find((m) => m.value === form.model)?.label ||
+												__("Select a model")
+											}}</span>
+											<FeatherIcon
+												name="chevron-down"
+												class="h-3.5 w-3.5 shrink-0 text-ink-gray-5"
+											/>
+										</button>
+									</template>
+								</PanelDropdown>
+							</div>
 
-				<label class="flex items-center gap-2 text-sm text-ink-gray-8">
-					<input v-model="form.enabled" type="checkbox" class="h-3.5 w-3.5" />
-					{{ __("Enabled") }}
-				</label>
+							<div class="agent-instructions">
+								<Textarea
+									:label="__('Instructions')"
+									:rows="12"
+									:placeholder="
+										__('What should this agent do? Describe its role, scope, and rules.')
+									"
+									:model-value="form.instructions"
+									:disabled="saving"
+									@update:model-value="(v) => (form.instructions = v)"
+								/>
+							</div>
+
+							<Switch
+								v-model="form.enabled"
+								:label="__('Enabled')"
+								:description="__('Off = this agent is hidden from pickers and won\'t run.')"
+								:disabled="saving"
+							/>
+						</div>
+					</DocSection>
+				</div>
 			</div>
 		</div>
 	</div>
 </template>
+
+<style scoped>
+/* Textarea's own size prop only ever emits text-base (15px, per this app's
+   Tailwind fontSize scale) — no smaller option — so the 14px ask has to
+   override the rendered <textarea> directly. */
+.agent-instructions :deep(textarea) {
+	font-size: 14px !important;
+}
+</style>

@@ -13,11 +13,24 @@
 	--text-lg: 17px;
 }
 
-/* frappe-ui forces `font-family: InterVar`, a face the desk doesn't load (it
-   ships "Inter"/"InterVariable"), so it falls back to the system font. Point
-   the panel at the desk's real fonts. */
+/* The real Inter variable font frappe-ui's components are designed against
+   (Jarvis gets this for free via frappe-ui/style.css) — served as a static
+   asset rather than imported through Vite, which would base64-inline a
+   ~260KB font file straight into the CSS (multiple times over, once per
+   src/format fallback) since this is a lib-mode build with no separate
+   asset output path. Without it the desk's system-font fallback below
+   renders visibly heavier than Jarvis. Only the upright face is shipped —
+   the panel never renders italic text. */
+@font-face {
+	font-family: "Inter";
+	font-weight: 100 900;
+	font-display: swap;
+	font-style: normal;
+	src: url("/assets/flow/fonts/Inter.var.woff2") format("woff2-variations");
+}
+
 .flow-panel {
-	font-family: "Inter", "InterVariable", ui-sans-serif, system-ui, sans-serif;
+	font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
 	font-weight: 400;
 }
 

@@ -142,13 +142,13 @@ function newAgent() {
 						>
 						<div class="min-w-0 flex-1">
 							<div class="truncate text-sm font-semibold text-ink-gray-9">{{ a.title }}</div>
-							<div class="truncate text-xs text-ink-gray-5">
+							<div class="truncate text-xs font-normal text-ink-gray-5">
 								{{ a.model ? __("Model: {0}", [a.model]) : __("No model set") }}
 							</div>
 						</div>
 					</div>
 
-					<p class="line-clamp-3 text-sm font-normal leading-tight text-ink-gray-6">
+					<p class="line-clamp-2 text-sm font-normal leading-tight text-ink-gray-6">
 					{{ description(a.instructions) }}
 				</p>
 
