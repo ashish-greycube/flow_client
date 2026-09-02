@@ -65,7 +65,7 @@ class FlowWidget {
 	// redundant second entry point to the same thing. This removes #flow-root
 	// from the DOM outright rather than just hiding it: the chat page's own
 	// bundle mounts its own #flow-root (same id, for the same shared CSS
-	// scoping — see postcss.config.js), and every Dropdown/Combobox in this app
+	// scoping — see postcss.config.js), and every Combobox in this app
 	// resolves its `portal-to="#flow-root"` target via a plain CSS-selector
 	// lookup, which would otherwise resolve to whichever of the two elements
 	// happens to come first in the DOM instead of the caller's own container.

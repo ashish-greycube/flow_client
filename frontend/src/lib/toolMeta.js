@@ -88,7 +88,7 @@ export function toolError(result) {
 	return null;
 }
 
-export const isScalar = (v) => v === null || typeof v !== "object";
+const isScalar = (v) => v === null || typeof v !== "object";
 
 export function formatScalar(v) {
 	if (v === null || v === undefined || v === "") return "—";

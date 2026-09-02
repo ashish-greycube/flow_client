@@ -25,10 +25,8 @@ CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 TOKEN_URL = "https://auth.openai.com/oauth/token"
 API_BASE = "https://chatgpt.com/backend-api"
 ORIGINATOR = "codex_cli_rs"
-CLIENT_VERSION = "0.145.0"
 CONNECT_TIMEOUT = 10
 READ_TIMEOUT = 120  # max stall between bytes
-CATALOG_TIMEOUT = 5
 REFRESH_SLACK_MS = 60_000
 
 # The ChatGPT serving surface, not the public API. litellm's model map describes
@@ -80,48 +78,6 @@ def complete(
 	if stream:
 		return chunks
 	return "".join(c.choices[0].delta.content or "" for c in chunks)
-
-
-def verify_credential(raw: str) -> dict:
-	"""The smallest real proof this login works: refresh the token, then hit the
-	authenticated model catalog. Spends no completion tokens. The refreshed access
-	token is discarded; OpenAI keeps the refresh token stable, so the pasted
-	credential stays valid to store afterwards."""
-	from frappe import _
-
-	try:
-		cred = refresh_credential(parse_credential(raw))
-		headers = request_headers(cred["access"], cred["account_id"], accept="application/json")
-		headers.pop("content-type")
-		resp = requests.get(
-			f"{API_BASE}/codex/models",
-			params={"client_version": CLIENT_VERSION},
-			headers=headers,
-			timeout=CATALOG_TIMEOUT,
-		)
-		if resp.status_code >= 400:
-			raise http_error(resp)
-		return {"success": True, "severity": "ok", "message": _("Connected")}
-	except CodexError as e:
-		return {"success": False, "severity": "error", "message": str(e)}
-	except Exception as e:
-		message, severity = readable_error(str(e))
-		return {"success": False, "severity": severity, "message": message}
-
-
-def readable_error(raw: str) -> tuple[str, str]:
-	low = raw.lower()
-	from frappe import _
-
-	if "authentication" in low or ("invalid" in low and "key" in low) or "401" in low:
-		return (_("That sign-in was rejected. Connect with ChatGPT again."), "error")
-	if "credit" in low or "quota" in low or "billing" in low or "429" in low:
-		return (_("The sign-in is valid, but the account is rate limited right now."), "warn")
-	if "not found" in low or "404" in low or "does not exist" in low:
-		return (_("The sign-in is valid, but that model isn't available on this account."), "warn")
-	if "connection" in low or "timeout" in low or "refused" in low:
-		return (_("Couldn't reach ChatGPT. Check your connection and try again."), "error")
-	return (raw[:300], "error")
 
 
 def model_metadata(model_id: str) -> dict:

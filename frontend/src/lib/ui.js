@@ -15,13 +15,9 @@ export { default as TextInput } from "frappe-ui/src/components/TextInput/TextInp
 export { default as Textarea } from "frappe-ui/src/components/Textarea/Textarea.vue";
 export { default as Switch } from "frappe-ui/src/components/Switch/Switch.vue";
 export { default as Breadcrumbs } from "frappe-ui/src/components/Breadcrumbs/Breadcrumbs.vue";
-export { default as Avatar } from "frappe-ui/src/components/Avatar/Avatar.vue";
-export { default as Progress } from "frappe-ui/src/components/Progress/Progress.vue";
-export { default as TabButtons } from "frappe-ui/src/components/TabButtons/TabButtons.vue";
-// Dropdown/Combobox teleport their popover content out of the DOM tree they're
-// mounted in. Both accept `portalTo`, which every usage here must set to
-// `"#flow-root"` — the panel's CSS is scoped to that id at build time
-// (postcss-prefix-selector), so content teleported to `document.body` (the
-// default) would render completely unstyled.
-export { default as Dropdown } from "frappe-ui/src/components/Dropdown/Dropdown.vue";
+// Combobox teleports its popover content out of the DOM tree it's mounted in.
+// It accepts `portalTo`, which every usage here must set to `"#flow-root"` —
+// the panel's CSS is scoped to that id at build time (postcss-prefix-selector),
+// so content teleported to `document.body` (the default) would render
+// completely unstyled.
 export { default as Combobox } from "frappe-ui/src/components/Combobox/Combobox.vue";
