@@ -14,6 +14,20 @@ body[data-route^="flow-guide"] .page-body {
 	margin-top: 0 !important;
 }
 
+body[data-route^="flow-guide"] .page-container,
+body[data-route^="flow-guide"] .page-body,
+body[data-route^="flow-guide"] .layout-main,
+body[data-route^="flow-guide"] .layout-main-section-wrapper,
+body[data-route^="flow-guide"] .layout-main-section {
+	width: 100% !important;
+	max-width: none !important;
+}
+
+body[data-route^="flow-guide"] .layout-main-section-wrapper,
+body[data-route^="flow-guide"] .layout-main-section {
+	padding: 0 !important;
+}
+
 .flow-guide-page {
 	background: var(--subtle-fg);
 	min-height: 100vh;
@@ -82,7 +96,7 @@ body[data-route^="flow-guide"] .page-body {
 }
 
 .flow-guide-shell {
-	max-width: 1120px;
+	max-width: 1440px;
 	margin: 0 auto;
 	padding: 40px 24px 64px;
 }
@@ -141,7 +155,7 @@ body[data-route^="flow-guide"] .page-body {
 
 .flow-guide-grid {
 	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 	gap: 16px;
 	margin-top: 20px;
 }
@@ -243,6 +257,31 @@ body[data-route^="flow-guide"] .page-body {
 	border-top: 1px solid var(--border-color);
 	color: var(--text-color);
 	font-size: var(--text-sm);
+}
+
+.flow-guide-how-to {
+	margin-top: 14px;
+	padding-top: 14px;
+	border-top: 1px solid var(--border-color);
+}
+
+.flow-guide-how-to h4 {
+	margin: 0 0 8px;
+	color: var(--text-color);
+	font-size: var(--text-sm);
+	font-weight: 600;
+}
+
+.flow-guide-how-to ol {
+	margin: 0;
+	padding-left: 20px;
+	color: var(--text-muted);
+	font-size: var(--text-sm);
+	line-height: 1.5;
+}
+
+.flow-guide-how-to li + li {
+	margin-top: 5px;
 }
 
 .flow-guide-note {

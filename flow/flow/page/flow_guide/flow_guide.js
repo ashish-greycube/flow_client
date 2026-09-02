@@ -17,48 +17,88 @@ function renderGuide(container) {
 			title: __("AI Chat"),
 			description: __("Ask a question in normal language. Flow can find permitted information, explain it, and help complete a task."),
 			example: __("Example: Show unpaid sales invoices due this week."),
+			howTo: [
+				__("Open Flow Chat and choose an agent from the selector beside the message box."),
+				__("Type your request with useful details such as the company, date range, or status, then send it."),
+				__("Review the answer and approve or deny any action when Flow asks."),
+			],
 		},
 		{
 			icon: "users",
 			title: __("Specialised Agents"),
 			description: __("Choose an agent for the type of work you need. Each agent has focused instructions and access to selected tools."),
 			example: __("Example: Use the Sales Analysis Agent for sales questions."),
+			howTo: [
+				__("Open Agent from the Flow sidebar to see the available featured and custom agents."),
+				__("Create an agent when needed by choosing a model and writing clear instructions for its role and limits."),
+				__("Return to Chat and select that agent before sending your request."),
+			],
 		},
 		{
 			icon: "tool",
 			title: __("Tools and Permissions"),
 			description: __("Tools let an agent read reports, find records, or make approved changes. Your Frappe permissions still apply."),
 			example: __("Flow cannot use a tool to access a record that you cannot access."),
+			howTo: [
+				__("Choose an agent in Chat, then select the sliders icon beside the agent selector."),
+				__("Set each tool to Always Allow, Needs Approval, or Blocked."),
+				__("When an approval request appears in chat, check the proposed action before approving it."),
+			],
 		},
 		{
 			icon: "book-open",
 			title: __("Knowledge"),
 			description: __("Knowledge gives an agent trusted reference material. This helps it answer from selected sources instead of unrelated data."),
 			example: __("Example: Answer a policy question from your company handbook."),
+			howTo: [
+				__("Open Knowledge Base from the Flow sidebar and create a base with a clear description."),
+				__("Add a Flow Knowledge Source using text, a file, a URL, or selected DocType records."),
+				__("After the source status is Completed, ask an agent that has access to that knowledge base."),
+			],
 		},
 		{
 			icon: "zap",
 			title: __("Triggers"),
 			description: __("A trigger starts an agent automatically when a document changes or when a schedule becomes due."),
 			example: __("Example: Review a new Lead after it is created."),
+			howTo: [
+				__("Open Triggers from the Flow sidebar and create a Flow Trigger."),
+				__("Choose an agent and either a DocType event or a scheduled cron expression."),
+				__("Add an optional condition, write the prompt template, enable the trigger, and save it."),
+			],
 		},
 		{
 			icon: "layers",
 			title: __("Macros"),
 			description: __("A macro saves one or more prompts as a reusable task. Run it again without writing the same instructions."),
 			example: __("Example: Save your weekly overdue invoice check."),
+			howTo: [
+				__("From a useful chat, open Action and select Save as macro, or open Macro and create one."),
+				__("Choose the agent, add the prompts in the order they should run, and save."),
+				__("Select Run whenever needed, or enable a schedule for automatic runs."),
+			],
 		},
 		{
 			icon: "chart",
 			title: __("Reports"),
 			description: __("Flow can explain required report filters, run a permitted Frappe report, and summarize the result."),
 			example: __("Example: Run a sales report for the current month."),
+			howTo: [
+				__("In Chat, choose an agent that has report tools and ask for the report by name or business purpose."),
+				__("Include known filters such as company and period; Flow will ask for any required values that are missing."),
+				__("Ask Flow to summarize, compare, or explain the returned results."),
+			],
 		},
 		{
 			icon: "download",
 			title: __("Excel Export"),
 			description: __("Flow can put suitable table data into an Excel file. It stores the file in Frappe and returns a download link."),
 			example: __("Example: Export the invoice list to Excel."),
+			howTo: [
+				__("Ask an agent with export access to export records or report results to Excel."),
+				__("State the filters and columns you need, and approve the tool call if prompted."),
+				__("When the export finishes, select the download link in Flow's reply."),
+			],
 		},
 	];
 
@@ -152,6 +192,10 @@ function renderFeature(grid, feature) {
 	$("<h3>").text(feature.title).appendTo(card);
 	$("<p>").text(feature.description).appendTo(card);
 	$("<p>").addClass("flow-guide-example").text(feature.example).appendTo(card);
+	const howTo = $("<div>").addClass("flow-guide-how-to").appendTo(card);
+	$("<h4>").text(__("How to use")).appendTo(howTo);
+	const steps = $("<ol>").appendTo(howTo);
+	feature.howTo.forEach((step) => $("<li>").text(step).appendTo(steps));
 }
 
 function makeButton(parent, label, icon, onClick, primary = false) {
