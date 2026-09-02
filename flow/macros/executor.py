@@ -105,7 +105,7 @@ def run_due_macros() -> None:
 	due = frappe.get_all(
 		MACRO,
 		filters={"enabled": 1, "schedule_enabled": 1, "next_run_at": ["<=", now]},
-		fields=["name", "owner", "schedule_frequency", "schedule_time"],
+		fields=["name", "owner", "schedule_frequency", "schedule_time", "cron_expression"],
 	)
 	for row in due:
 		try:
@@ -121,7 +121,14 @@ def _queue_scheduled(row, now) -> None:
 		frappe.db.set_value(
 			MACRO,
 			row.name,
-			{"next_run_at": compute_next_run(row.schedule_frequency, row.schedule_time, now)},
+			{
+				"next_run_at": compute_next_run(
+					row.schedule_frequency,
+					row.schedule_time,
+					now,
+					row.cron_expression,
+				)
+			},
 			update_modified=False,
 		)
 		return
@@ -142,7 +149,12 @@ def _queue_scheduled(row, now) -> None:
 		macro.name,
 		{
 			"last_run_at": now,
-			"next_run_at": compute_next_run(macro.schedule_frequency, macro.schedule_time, now),
+			"next_run_at": compute_next_run(
+				macro.schedule_frequency,
+				macro.schedule_time,
+				now,
+				macro.cron_expression,
+			),
 		},
 		update_modified=False,
 	)

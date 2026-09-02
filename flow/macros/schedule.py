@@ -15,8 +15,29 @@ def validate_schedule_time(value) -> None:
 		frappe.throw(_("Schedule Time must be a valid time of day."))
 
 
-def compute_next_run(frequency: str, schedule_time=None, from_dt=None) -> datetime.datetime:
+def validate_cron_expression(value: str | None) -> None:
+	from croniter import CroniterBadCronError, croniter
+
+	if not (value or "").strip():
+		frappe.throw(_("Cron Expression is required for Cron schedules."))
+	try:
+		croniter(value)
+	except (CroniterBadCronError, ValueError) as exc:
+		frappe.throw(_("Invalid cron expression: {0}").format(exc), title=_("Invalid Cron"))
+
+
+def compute_next_run(
+	frequency: str,
+	schedule_time=None,
+	from_dt=None,
+	cron_expression: str | None = None,
+) -> datetime.datetime:
 	base = get_datetime(from_dt) if from_dt else now_datetime()
+	if frequency == "Cron":
+		validate_cron_expression(cron_expression)
+		from croniter import croniter
+
+		return croniter(cron_expression, base).get_next(datetime.datetime)
 	seconds = _time_to_seconds(schedule_time)
 	candidate = base.replace(
 		hour=seconds // 3600,

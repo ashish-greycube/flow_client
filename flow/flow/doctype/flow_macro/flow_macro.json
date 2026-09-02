@@ -6,7 +6,7 @@
  "field_order": [
   "section_basics", "macro_name", "enabled", "description", "column_basics", "agent", "stop_on_error", "auto_approve",
   "section_steps", "steps",
-  "section_schedule", "schedule_enabled", "schedule_frequency", "column_schedule", "schedule_time", "last_run_at", "next_run_at"
+  "section_schedule", "schedule_enabled", "schedule_frequency", "cron_expression", "column_schedule", "schedule_time", "last_run_at", "next_run_at"
  ],
  "fields": [
   {"fieldname":"section_basics","fieldtype":"Section Break","label":"Macro Details"},
@@ -21,9 +21,10 @@
   {"fieldname":"steps","fieldtype":"Table","label":"Steps","options":"Flow Macro Step","reqd":1,"description":"Ordered prompts. Each prompt is a separate turn in the same Flow Session."},
   {"fieldname":"section_schedule","fieldtype":"Section Break","label":"Schedule"},
   {"default":"0","fieldname":"schedule_enabled","fieldtype":"Check","label":"Run on a Schedule"},
-  {"default":"Daily","depends_on":"eval:doc.schedule_enabled","fieldname":"schedule_frequency","fieldtype":"Select","label":"Frequency","options":"Daily\nWeekly\nMonthly"},
+  {"default":"Daily","depends_on":"eval:doc.schedule_enabled","fieldname":"schedule_frequency","fieldtype":"Select","label":"Frequency","options":"Daily\nWeekly\nMonthly\nCron"},
+  {"depends_on":"eval:doc.schedule_enabled && doc.schedule_frequency == 'Cron'","fieldname":"cron_expression","fieldtype":"Data","label":"Cron Expression","mandatory_depends_on":"eval:doc.schedule_enabled && doc.schedule_frequency == 'Cron'","description":"Standard five-part cron expression in site-local time, for example 0 9 * * 1-5."},
   {"fieldname":"column_schedule","fieldtype":"Column Break"},
-  {"depends_on":"eval:doc.schedule_enabled","fieldname":"schedule_time","fieldtype":"Time","label":"Time of Day","description":"Site-local time. Defaults to 09:00."},
+  {"depends_on":"eval:doc.schedule_enabled && doc.schedule_frequency != 'Cron'","fieldname":"schedule_time","fieldtype":"Time","label":"Time of Day","description":"Site-local time. Defaults to 09:00."},
   {"fieldname":"last_run_at","fieldtype":"Datetime","label":"Last Scheduled Run At","read_only":1},
   {"fieldname":"next_run_at","fieldtype":"Datetime","label":"Next Run At","read_only":1}
  ],

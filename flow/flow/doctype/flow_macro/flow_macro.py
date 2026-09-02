@@ -68,20 +68,32 @@ class FlowMacro(Document):
 			)
 
 	def _set_next_run(self):
-		from flow.macros.schedule import compute_next_run, validate_schedule_time
+		from flow.macros.schedule import (
+			compute_next_run,
+			validate_cron_expression,
+			validate_schedule_time,
+		)
 
-		validate_schedule_time(self.schedule_time)
 		if not self.schedule_enabled:
 			self.next_run_at = None
 			return
+		if self.schedule_frequency == "Cron":
+			validate_cron_expression(self.cron_expression)
+		else:
+			validate_schedule_time(self.schedule_time)
 		if (
 			self.is_new()
 			or self.has_value_changed("schedule_enabled")
 			or self.has_value_changed("schedule_frequency")
 			or self.has_value_changed("schedule_time")
+			or self.has_value_changed("cron_expression")
 			or not self.next_run_at
 		):
-			self.next_run_at = compute_next_run(self.schedule_frequency, self.schedule_time)
+			self.next_run_at = compute_next_run(
+				self.schedule_frequency,
+				self.schedule_time,
+				cron_expression=self.cron_expression,
+			)
 
 
 def on_doctype_update():

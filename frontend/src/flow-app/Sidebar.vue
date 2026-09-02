@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed, watch } from "vue";
-import { useRouter } from "vue-router";
+import { ref, computed, watch, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import BrandMark from "@/components/BrandMark.vue";
 import SearchInput from "@/components/SearchInput.vue";
 import { FeatherIcon } from "@/lib/ui";
@@ -9,7 +9,9 @@ import { __ } from "@/lib/translate";
 import { searchSessions } from "@/api/client";
 
 const router = useRouter();
-const { recentSessions, sessionName, switchSession, newChat, sending } = useStore();
+const route = useRoute();
+const { recentSessions, sessionName, switchSession, newChat, sending, refreshHistory } =
+	useStore();
 
 const query = ref("");
 const results = ref([]);
@@ -17,6 +19,9 @@ const searching = ref(false);
 
 let debounce;
 let searchSeq = 0;
+
+onMounted(() => refreshHistory().catch(() => {}));
+
 watch(query, (q) => {
 	clearTimeout(debounce);
 	q = q.trim();
@@ -61,6 +66,10 @@ function openAgents() {
 	router.push("/agents");
 }
 
+function openMacros() {
+	router.push("/macros");
+}
+
 // Nav rows to the doctypes a Flow user manages directly — same list views the
 // desk already has, just one click away from the chat instead of hunting
 // through the workspace.
@@ -99,6 +108,7 @@ function timeAgo(ds) {
 		<nav class="flex flex-col gap-px border-t border-outline-gray-1 px-2 py-1.5">
 			<button
 				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
+				:class="route.path === '/agents' ? 'bg-surface-selected shadow-sm' : ''"
 				@click="openAgents"
 			>
 				<FeatherIcon name="cpu" class="h-4 w-4 shrink-0" />
@@ -106,7 +116,8 @@ function timeAgo(ds) {
 			</button>
 			<button
 				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
-				@click="openList('Flow Macro')"
+				:class="route.path.startsWith('/macro') ? 'bg-surface-selected shadow-sm' : ''"
+				@click="openMacros"
 			>
 				<FeatherIcon name="layers" class="h-4 w-4 shrink-0" />
 				{{ __("Macro") }}
@@ -141,7 +152,9 @@ function timeAgo(ds) {
 				:class="s.name === sessionName ? 'bg-surface-selected shadow-sm' : ''"
 				@click="choose(s.name)"
 			>
-				<span class="flex-1 truncate text-sm text-ink-gray-8">{{ s.title || s.name }}</span>
+				<span class="flex-1 truncate text-sm text-ink-gray-8">{{
+					s.title || s.name
+				}}</span>
 				<span class="shrink-0 text-[11px] text-ink-gray-5">{{ timeAgo(s.modified) }}</span>
 			</button>
 
@@ -151,6 +164,16 @@ function timeAgo(ds) {
 			<div v-else-if="!list.length" class="px-2 py-4 text-center text-xs text-ink-gray-5">
 				{{ query.trim() ? __("No matching chats") : __("No recent chats") }}
 			</div>
+		</div>
+
+		<div class="flex shrink-0 items-center justify-center border-t border-outline-gray-1 px-3 py-4">
+			<a href="https://greycube.in/" target="_blank" rel="noopener noreferrer">
+				<img
+					:src="'/assets/flow/images/Greycube_Technologies.png'"
+					:alt="__('GreyCube Technologies')"
+					class="h-[3.8rem] w-auto"
+				/>
+			</a>
 		</div>
 	</aside>
 </template>

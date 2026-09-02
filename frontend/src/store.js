@@ -63,7 +63,7 @@ async function loadInitial() {
 		agents.value = a;
 		models.value = m;
 		const assistant = a.find((x) => x.name === "Flow");
-		selectedAgent.value = assistant ? assistant.name : a[0]?.name ?? null;
+		selectedAgent.value = assistant ? assistant.name : (a[0]?.name ?? null);
 		loadToolApproval(selectedAgent.value);
 		loaded.value = true;
 		focusTick.value++;
@@ -89,8 +89,19 @@ async function restoreSession() {
 	}
 }
 
+let historyRequest = null;
 async function refreshHistory() {
-	recentSessions.value = await api.loadHistory();
+	if (!historyRequest) {
+		historyRequest = api
+			.loadHistory()
+			.then((sessions) => {
+				recentSessions.value = sessions;
+			})
+			.finally(() => {
+				historyRequest = null;
+			});
+	}
+	return historyRequest;
 }
 
 // Load the classification map for `agent`. The cache serves instantly and is
@@ -291,7 +302,7 @@ async function send(text) {
 				...(selectedModel.value && { model: selectedModel.value }),
 			},
 			(event) => handleEvent(event, assistant),
-			abortController.signal
+			abortController.signal,
 		);
 	} catch (e) {
 		if (e.name === "AbortError") assistant.pending = false;
@@ -320,7 +331,7 @@ async function resume(answers, pausedMsg) {
 		await resumeRun(
 			{ run_name: rn, answers },
 			(event) => handleEvent(event, pausedMsg),
-			abortController.signal
+			abortController.signal,
 		);
 	} catch (e) {
 		if (e.name === "AbortError") pausedMsg.pending = false;

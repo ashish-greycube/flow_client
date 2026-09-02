@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, onUnmounted, ref, computed } from "vue";
+import { useRoute } from "vue-router";
 import ToolPermissionsDialog from "../ToolPermissionsDialog.vue";
 import SaveAsMacroDialog from "../SaveAsMacroDialog.vue";
 import MessageList from "@/components/MessageList.vue";
@@ -11,6 +12,7 @@ import { __ } from "@/lib/translate";
 const {
 	loadInitial,
 	restoreSession,
+	switchSession,
 	scrollTick,
 	selectedAgent,
 	agentLabel,
@@ -18,6 +20,7 @@ const {
 	recentSessions,
 	messages,
 } = useStore();
+const route = useRoute();
 
 const page = ref(null);
 const composer = ref(null);
@@ -27,7 +30,7 @@ const macroDialogOpen = ref(false);
 let observer = null;
 
 const sessionTitle = computed(
-	() => recentSessions.value.find((s) => s.name === sessionName.value)?.title || __("New chat")
+	() => recentSessions.value.find((s) => s.name === sessionName.value)?.title || __("New chat"),
 );
 
 // Mirrors Jarvis's own "Save as macro": every user prompt in the conversation,
@@ -35,7 +38,7 @@ const sessionTitle = computed(
 const macroSteps = computed(() =>
 	messages.value
 		.filter((m) => m.role === "user" && m.content && m.content.trim())
-		.map((m) => ({ label: "", prompt: m.content }))
+		.map((m) => ({ label: "", prompt: m.content })),
 );
 const canSaveAsMacro = computed(() => macroSteps.value.length > 0);
 const defaultMacroName = computed(() => {
@@ -62,9 +65,11 @@ function openGuide() {
 // multiline text) must never cover the last message.
 onMounted(async () => {
 	await loadInitial();
-	// The page has no "open" toggle to gate this on (unlike the old panel) —
-	// it's always open, so pick up the last-used session on every load.
-	await restoreSession();
+	const requestedSession = Array.isArray(route.query.session)
+		? route.query.session[0]
+		: route.query.session;
+	if (requestedSession) await switchSession(requestedSession);
+	else await restoreSession();
 
 	observer = new ResizeObserver(([entry]) => {
 		page.value?.style.setProperty("--flow-composer-h", `${entry.target.offsetHeight}px`);
@@ -77,7 +82,9 @@ onUnmounted(() => observer?.disconnect());
 
 <template>
 	<div ref="page" class="relative flex min-w-0 flex-1 flex-col bg-surface-white">
-		<header class="flex items-center justify-between border-b border-outline-gray-1 px-4 py-2.5">
+		<header
+			class="flex items-center justify-between border-b border-outline-gray-1 px-4 py-2.5"
+		>
 			<div class="min-w-0 truncate text-sm font-semibold text-ink-gray-9">
 				{{ sessionTitle }}
 			</div>
@@ -139,7 +146,9 @@ onUnmounted(() => observer?.disconnect());
 		<Composer
 			ref="composer"
 			:disclaimer="
-				__('Flow can make mistakes. Verify important actions before submitting to ERPNext.')
+				__(
+					'Flow can make mistakes. Verify important actions before submitting to ERPNext.',
+				)
 			"
 		>
 			<template #tools>

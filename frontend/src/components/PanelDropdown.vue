@@ -16,6 +16,8 @@ const props = defineProps({
 	placement: { type: String, default: "top" },
 	disabled: { type: Boolean, default: false },
 	searchable: { type: Boolean, default: false },
+	matchTriggerWidth: { type: Boolean, default: false },
+	hideScrollbar: { type: Boolean, default: false },
 });
 const emit = defineEmits(["update:modelValue"]);
 
@@ -70,16 +72,18 @@ watch(open, async (v) => {
 </script>
 
 <template>
-	<div class="relative">
+	<div class="relative" :class="{ 'w-full': matchTriggerWidth }">
 		<slot name="trigger" :toggle="toggle" :open="open" />
 
 		<template v-if="open">
 			<div class="fixed inset-0 z-40" @click="open = false"></div>
 			<div
 				ref="menu"
-				class="absolute z-50 w-max min-w-[12rem] max-w-[15rem] overflow-hidden rounded-lg border border-outline-gray-2 bg-surface-white shadow-2xl"
+				class="absolute z-50 overflow-hidden rounded-lg border border-outline-gray-2 bg-surface-white shadow-2xl"
 				:class="[
-					align === 'right' ? 'right-0' : 'left-0',
+					matchTriggerWidth
+						? 'left-0 w-full min-w-0 max-w-none'
+						: `w-max min-w-[12rem] max-w-[15rem] ${align === 'right' ? 'right-0' : 'left-0'}`,
 					placement === 'bottom' ? 'top-[calc(100%+8px)]' : 'bottom-[calc(100%+8px)]',
 				]"
 				:style="shift ? { transform: `translateX(${shift}px)` } : null"
@@ -90,7 +94,10 @@ watch(open, async (v) => {
 					:placeholder="__('Search…')"
 					autofocus
 				/>
-				<div class="max-h-80 overflow-y-auto p-1.5 space-y-0.5">
+				<div
+					class="max-h-80 space-y-0.5 overflow-y-auto p-1.5"
+					:class="{ 'panel-dropdown-scrollbar-hidden': hideScrollbar }"
+				>
 					<button
 						v-for="item in filtered"
 						:key="item.value ?? '__default'"
@@ -116,3 +123,13 @@ watch(open, async (v) => {
 		</template>
 	</div>
 </template>
+
+<style scoped>
+.panel-dropdown-scrollbar-hidden {
+	scrollbar-width: none;
+}
+
+.panel-dropdown-scrollbar-hidden::-webkit-scrollbar {
+	display: none;
+}
+</style>
