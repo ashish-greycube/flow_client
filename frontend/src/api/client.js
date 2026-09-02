@@ -133,9 +133,6 @@ export const createKnowledgeSource = (values) =>
 export const saveKnowledgeSource = (doc) =>
 	frappe.xcall("frappe.client.save", { doc: { doctype: "Flow Knowledge Source", ...doc } });
 
-export const deleteKnowledgeSource = (name) =>
-	frappe.xcall("frappe.client.delete", { doctype: "Flow Knowledge Source", name });
-
 // Flow Knowledge Source's `resync`/`reconcile` are plain whitelisted Document
 // methods (flow_knowledge_source.py) — called the same generic way Desk's own
 // `frm.call()` does (frappe/public/js/frappe/form/controls/button.js), rather

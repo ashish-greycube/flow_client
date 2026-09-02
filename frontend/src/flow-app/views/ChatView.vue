@@ -1,6 +1,6 @@
 <script setup>
-import { onMounted, onUnmounted, ref, computed } from "vue";
-import { useRoute } from "vue-router";
+import { onMounted, onUnmounted, ref, computed, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import ToolPermissionsDialog from "../ToolPermissionsDialog.vue";
 import SaveAsMacroDialog from "../SaveAsMacroDialog.vue";
 import MessageList from "@/components/MessageList.vue";
@@ -13,6 +13,7 @@ const {
 	loadInitial,
 	restoreSession,
 	switchSession,
+	newChat,
 	scrollTick,
 	selectedAgent,
 	agentLabel,
@@ -21,6 +22,7 @@ const {
 	messages,
 } = useStore();
 const route = useRoute();
+const router = useRouter();
 
 const page = ref(null);
 const composer = ref(null);
@@ -65,9 +67,7 @@ function openGuide() {
 // multiline text) must never cover the last message.
 onMounted(async () => {
 	await loadInitial();
-	const requestedSession = Array.isArray(route.query.session)
-		? route.query.session[0]
-		: route.query.session;
+	const requestedSession = route.params.session || null;
 	if (requestedSession) await switchSession(requestedSession);
 	else await restoreSession();
 
@@ -78,6 +78,32 @@ onMounted(async () => {
 	observer.observe(composer.value.$el);
 });
 onUnmounted(() => observer?.disconnect());
+
+// Route -> store: opening a chat from the sidebar, a trigger log, or a macro
+// run (or the browser's own back/forward) lands here with a route param —
+// switch to it, but only when it actually differs from what's already
+// loaded, so this doesn't re-trigger on the very change the store -> route
+// watcher below just made.
+watch(
+	() => route.params.session || null,
+	(session) => {
+		if (session === sessionName.value) return;
+		if (session) switchSession(session);
+		else newChat();
+	},
+);
+
+// Store -> route: keeps the URL in sync when the session changes some other
+// way — most importantly, a brand-new chat's first turn only gets a real
+// session name from the backend once the run starts (store.js's
+// "run_started" handler), well after this component mounted on the bare "/"
+// route with no session yet.
+watch(sessionName, (name) => {
+	const current = route.params.session || null;
+	if (name === current) return;
+	if (name) router.replace({ name: "chat-session", params: { session: name } });
+	else router.replace({ name: "chat" });
+});
 </script>
 
 <template>
@@ -177,3 +203,16 @@ onUnmounted(() => observer?.disconnect());
 		/>
 	</div>
 </template>
+
+<style scoped>
+/* MessageList/Composer are shared with the floating widget (a much narrower
+   fixed-width popup, where this is a no-op) — scoping the override here
+   instead of editing those components keeps the widget's own width intact.
+   `:deep()` needs an outer selector to actually attach this component's
+   data-v- scope attribute — a bare `:deep(.max-w-3xl)` compiles unscoped and
+   just ties with Tailwind's own !important rule on specificity, losing on
+   source order. */
+.relative :deep(.max-w-3xl) {
+	max-width: 70rem !important;
+}
+</style>

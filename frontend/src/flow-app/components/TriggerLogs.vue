@@ -59,7 +59,7 @@ function formatDate(value) {
 }
 
 function openSession(session) {
-	if (session) router.push({ name: "chat", query: { session } });
+	if (session) router.push({ name: "chat-session", params: { session } });
 }
 </script>
 

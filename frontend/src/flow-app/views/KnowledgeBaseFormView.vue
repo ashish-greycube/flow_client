@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, reactive, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import DocSection from "@/components/DocSection.vue";
 import { Button, FeatherIcon, Spinner, Badge, TextInput, Textarea, Switch, Breadcrumbs } from "@/lib/ui";
@@ -122,7 +122,14 @@ async function load() {
 	}
 	snapshotForm();
 }
-onMounted(load);
+// A watcher, not onMounted: after Save this view now stays on the knowledge
+// base's own page instead of bouncing to the list, which for a fresh create
+// means routing from knowledge-base-new to knowledge-base-edit for the SAME
+// name it's about to receive — since both routes resolve to this one
+// component, vue-router reuses the existing instance rather than remounting
+// it, so onMounted would never fire again (see AgentFormView.vue's identical
+// fix/note).
+watch(kbName, load, { immediate: true });
 
 function goBack() {
 	router.push({ name: "knowledge-bases" });
@@ -136,6 +143,7 @@ async function save() {
 			enabled: form.enabled ? 1 : 0,
 			description: form.description.trim(),
 		};
+		let finalName;
 		if (isEdit.value) {
 			let name = kbName.value;
 			const newTitle = form.title.trim();
@@ -155,11 +163,22 @@ async function save() {
 				...values,
 			});
 			frappe.show_alert({ message: __("Knowledge base updated."), indicator: "green" });
+			finalName = name;
 		} else {
-			await createKnowledgeBase({ title: form.title.trim(), ...values });
+			const created = await createKnowledgeBase({ title: form.title.trim(), ...values });
 			frappe.show_alert({ message: __("Knowledge base created."), indicator: "green" });
+			finalName = created.name;
 		}
-		goBack();
+		// Stay on the knowledge base's own page after saving instead of
+		// bouncing back to the list. A rename changed the docname, so the
+		// route has to follow it (the watcher above then reloads under the
+		// new name); otherwise just reload in place to clear the dirty badge
+		// and refresh docMeta.
+		if (kbName.value !== finalName) {
+			await router.replace({ name: "knowledge-base-edit", params: { name: finalName } });
+		} else {
+			await load();
+		}
 	} catch (e) {
 		frappe.show_alert({ message: e.message || __("Could not save knowledge base."), indicator: "red" });
 	} finally {

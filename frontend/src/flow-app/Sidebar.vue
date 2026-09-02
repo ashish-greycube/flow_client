@@ -10,8 +10,7 @@ import { searchSessions } from "@/api/client";
 
 const router = useRouter();
 const route = useRoute();
-const { recentSessions, sessionName, switchSession, newChat, sending, refreshHistory } =
-	useStore();
+const { recentSessions, sessionName, sending, refreshHistory } = useStore();
 
 const SIDEBAR_STORAGE_KEY = "flow-sidebar-collapsed";
 const query = ref("");
@@ -47,21 +46,18 @@ watch(query, (q) => {
 // Server results while searching, otherwise the recent list the store keeps fresh.
 const list = computed(() => (query.value.trim() ? results.value : recentSessions.value));
 
-// A chat action only means something on the Chat view — jump there first if
-// the sidebar is clicked from Agents/Flow Guide.
-function goToChat() {
-	if (router.currentRoute.value.path !== "/") router.push("/");
-}
-
+// Routing (not a direct switchSession/newChat call) so the URL reflects which
+// chat is open — ChatView's own route watcher does the actual store update in
+// response, the same "route drives data" pattern the Agent/Knowledge Base
+// pages use.
 function startNewChat() {
-	newChat();
-	goToChat();
+	if (sending.value) return;
+	router.push({ name: "chat" });
 }
 
 function choose(name) {
 	if (sending.value) return;
-	switchSession(name);
-	goToChat();
+	router.push({ name: "chat-session", params: { session: name } });
 }
 
 function openAgents() {
@@ -101,12 +97,12 @@ function timeAgo(ds) {
 	return window.moment ? moment(ds).fromNow() : ds;
 }
 
+// Expanded by default — only actually collapsed once the user chooses to.
 function readCollapsed() {
 	try {
-		const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY);
-		return saved === null ? true : saved === "1";
+		return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "1";
 	} catch {
-		return true;
+		return false;
 	}
 }
 </script>
@@ -170,13 +166,18 @@ function readCollapsed() {
 				<span v-if="!collapsed">{{ __("Macro") }}</span>
 			</button>
 			<button
-                class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
-                :class="route.path.startsWith('/knowledge-bases') ? 'bg-surface-selected shadow-sm' : ''"
-                @click="openKnowledgeBases"
-            >
-                <FeatherIcon name="book-open" class="h-4 w-4 shrink-0" />
-                {{ __("Knowledge Base") }}
-            </button>
+				class="flex h-[30px] w-full items-center rounded text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
+				:class="[
+					collapsed ? 'justify-center px-1' : 'gap-2 px-2',
+					route.path.startsWith('/knowledge-bases') ? 'bg-surface-selected shadow-sm' : '',
+				]"
+				:title="collapsed ? __('Knowledge Base') : undefined"
+				:aria-label="__('Knowledge Base')"
+				@click="openKnowledgeBases"
+			>
+				<FeatherIcon name="book-open" class="h-4 w-4 shrink-0" />
+				<span v-if="!collapsed">{{ __("Knowledge Base") }}</span>
+			</button>
 			<button
 				class="flex h-[30px] w-full items-center rounded text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
 				:class="[

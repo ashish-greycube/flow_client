@@ -82,7 +82,7 @@ async function stop() {
 
 function openSession() {
 	if (!run.value?.session) return;
-	router.push({ name: "chat", query: { session: run.value.session } });
+	router.push({ name: "chat-session", params: { session: run.value.session } });
 }
 
 function formatDate(value) {

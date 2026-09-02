@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import PanelDropdown from "@/components/PanelDropdown.vue";
 import DocSection from "@/components/DocSection.vue";
@@ -87,9 +87,8 @@ const userItems = computed(() => [
 	})),
 ]);
 
-onMounted(load);
-
 async function load() {
+	loading.value = true;
 	try {
 		const [agentRows, doctypeRows, userRows] = await Promise.all([
 			loadTriggerAgents(),
@@ -109,23 +108,46 @@ async function load() {
 	}
 	snapshotForm();
 }
+// A watcher, not onMounted: after Save this view now stays on the trigger's
+// own page instead of bouncing to the list, which for a fresh create means
+// routing from trigger-new to trigger for the SAME name it's about to
+// receive — since both routes resolve to this one component, vue-router
+// reuses the existing instance rather than remounting it, so onMounted would
+// never fire again (see AgentFormView.vue's identical fix/note).
+watch(() => [props.isNew, props.name], load, { immediate: true });
 
 async function save() {
 	if (!canEdit.value || !canSave.value || !dirty.value) return;
 	saving.value = true;
 	try {
 		const values = editableValues();
+		let finalName;
 		if (props.isNew) {
-			await createTrigger({ doctype: "Flow Trigger", title: form.title.trim(), ...values });
+			const created = await createTrigger({
+				doctype: "Flow Trigger",
+				title: form.title.trim(),
+				...values,
+			});
 			frappe.show_alert({ message: __("Trigger created."), indicator: "green" });
+			finalName = created.name;
 		} else {
 			let name = props.name;
 			const newTitle = form.title.trim();
 			if (newTitle !== name) name = await renameTrigger(name, newTitle);
 			await updateTrigger(name, values);
 			frappe.show_alert({ message: __("Trigger updated."), indicator: "green" });
+			finalName = name;
 		}
-		goBack();
+		// Stay on the trigger's own page after saving instead of bouncing back
+		// to the list. A rename/create means a different name backs this route
+		// now, so let the route follow it (the watcher above then reloads
+		// under the new name); otherwise just reload in place to clear the
+		// dirty badge.
+		if (props.isNew || props.name !== finalName) {
+			await router.replace({ name: "trigger", params: { name: finalName } });
+		} else {
+			await load();
+		}
 	} catch (error) {
 		showError(error, __("Could not save trigger."));
 	} finally {

@@ -33,6 +33,7 @@ export const router = createRouter({
 	history: createMemoryHistory(),
 	routes: [
 		{ path: "/", name: "chat", component: ChatView },
+		{ path: "/c/:session", name: "chat-session", component: ChatView, props: true },
 		{ path: "/agents", name: "agents", component: AgentsView },
 		{ path: "/agents/new", name: "agent-new", component: AgentFormView },
 		{ path: "/agents/:name", name: "agent-edit", component: AgentFormView },
@@ -75,6 +76,7 @@ export const router = createRouter({
 // vue-router location -> the extra segments Frappe's route should carry
 // after "flow-chat" (frappe.set_route("flow-chat", ...segments)).
 function toFrappeSegments(route) {
+	if (route.name === "chat-session") return ["flow-chat", "c", route.params.session];
 	if (route.name === "agents") return ["flow-chat", "agents"];
 	if (route.name === "agent-new") return ["flow-chat", "agents", "new"];
 	if (route.name === "agent-edit") return ["flow-chat", "agents", route.params.name];
@@ -102,6 +104,7 @@ function toFrappeSegments(route) {
 // Frappe's current route segments -> a vue-router location to push.
 function toVueLocation(segments) {
 	const [, section, sub, sourcesWord, sourceSub] = segments;
+	if (section === "c" && sub) return { name: "chat-session", params: { session: sub } };
 	if (section === "agents") {
 		if (!sub) return { name: "agents" };
 		if (sub === "new") return { name: "agent-new" };
@@ -173,7 +176,13 @@ export function attachFrappeRouteSync() {
 		if (segments[0] !== "flow-chat") return; // navigated off this page entirely
 		const target = toVueLocation(segments);
 		const current = router.currentRoute.value;
-		if (current.name === target.name && current.params.name === target.params?.name) return;
+		if (
+			current.name === target.name &&
+			current.params.name === target.params?.name &&
+			current.params.session === target.params?.session
+		) {
+			return;
+		}
 		syncing = true;
 		try {
 			await router.push(target);

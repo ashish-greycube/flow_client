@@ -10,7 +10,6 @@ import {
 	getKnowledgeSource,
 	createKnowledgeSource,
 	saveKnowledgeSource,
-	deleteKnowledgeSource,
 	resyncKnowledgeSource,
 	reconcileKnowledgeSource,
 	loadReferenceDoctypes,
@@ -41,8 +40,6 @@ const SOURCE_TYPE_ITEMS = [
 
 const loading = ref(false);
 const saving = ref(false);
-const deleting = ref(false);
-const confirmingDelete = ref(false);
 const resyncing = ref(false);
 const reconciling = ref(false);
 const uploading = ref(false);
@@ -171,7 +168,6 @@ function formatDatetime(value) {
 }
 
 async function load() {
-	confirmingDelete.value = false;
 	[kbTitle.value, referenceDoctypes.value] = await Promise.all([
 		getKnowledgeBase(kbName.value)
 			.then((doc) => doc.title)
@@ -348,19 +344,6 @@ async function save() {
 		frappe.show_alert({ message: e.message || __("Could not save source."), indicator: "red" });
 	} finally {
 		saving.value = false;
-	}
-}
-
-async function confirmDelete() {
-	deleting.value = true;
-	try {
-		await deleteKnowledgeSource(sourceName.value);
-		frappe.show_alert({ message: __("Source deleted."), indicator: "green" });
-		goBack();
-	} catch (e) {
-		frappe.show_alert({ message: e.message || __("Could not delete source."), indicator: "red" });
-	} finally {
-		deleting.value = false;
 	}
 }
 
@@ -643,41 +626,6 @@ async function reconcile() {
 							>{{ form.error_log }}</pre
 						>
 					</DocSection>
-
-					<div
-						v-if="isEdit && !isSystemGenerated"
-						class="mt-1 flex items-center justify-between rounded-md border border-outline-gray-1 px-3 py-2"
-					>
-						<span class="text-xs text-ink-gray-5">{{
-							confirmingDelete
-								? __("Delete this source? This can't be undone.")
-								: __("Danger zone")
-						}}</span>
-						<div class="flex items-center gap-2">
-							<template v-if="confirmingDelete">
-								<button
-									class="text-xs text-ink-gray-5 hover:text-ink-gray-8"
-									@click="confirmingDelete = false"
-								>
-									{{ __("Cancel") }}
-								</button>
-								<button
-									class="text-xs text-ink-red-2 hover:underline"
-									:disabled="deleting"
-									@click="confirmDelete"
-								>
-									{{ deleting ? __("Deleting…") : __("Confirm delete") }}
-								</button>
-							</template>
-							<button
-								v-else
-								class="text-xs text-ink-red-2 hover:underline"
-								@click="confirmingDelete = true"
-							>
-								{{ __("Delete source") }}
-							</button>
-						</div>
-					</div>
 				</div>
 			</div>
 		</div>
