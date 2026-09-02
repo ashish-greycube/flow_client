@@ -6,29 +6,67 @@ function getList(doctype, options) {
 }
 
 export const loadAgents = () =>
-	getList("Flow Agent", { filters: { enabled: 1 }, fields: ["name", "title"], limit: 50 });
+	getList("Flow Agent", {
+		filters: { enabled: 1 },
+		fields: ["name", "title"],
+		limit_page_length: 50,
+	});
 
 // Full agent catalog for the Agents page (Featured/Enabled/Disabled tabs +
 // search) — every agent regardless of enabled state, with the fields needed
 // to render a card. Flow has no human-facing "description" field on Flow
 // Agent, so the card falls back to a truncated `instructions` (the LLM
 // system prompt) — the closest thing to one that already exists.
+// `frappe.client.get_list` only recognizes `limit_page_length` (default 20)
+// — a plain `limit` kwarg is silently dropped, which capped this at 20 rows.
 export const loadAllAgents = () =>
 	getList("Flow Agent", {
 		fields: ["name", "title", "enabled", "is_system_generated", "model", "instructions"],
 		order_by: "title asc",
-		limit: 500,
+		limit_page_length: 500,
 	});
 
 export const loadModels = () =>
-	getList("Flow Model", { filters: { enabled: 1 }, fields: ["name", "title"], limit: 50 });
+	getList("Flow Model", {
+		filters: { enabled: 1 },
+		fields: ["name", "title"],
+		limit_page_length: 50,
+	});
+
+// Full CRUD for the Agents page's create/edit dialog — plain frappe.client
+// calls (the same generic whitelisted methods this file already uses
+// elsewhere), so no new server-side endpoint is needed.
+export const getAgent = (name) => frappe.xcall("frappe.client.get", { doctype: "Flow Agent", name });
+
+export const createAgent = (values) =>
+	frappe.xcall("frappe.client.insert", { doc: { doctype: "Flow Agent", ...values } });
+
+// `fieldname` as a dict of {field: value} updates every key in one call.
+// Title is deliberately never included here — Flow Agent is `autoname:
+// "field:title"`, so the title field is locked in sync with the docname on
+// every save (Document._sync_autoname_field) and silently reverts any other
+// value written to it this way. Changing the title has to go through an
+// actual rename (renameAgent below), which updates the docname and the
+// field together.
+export const updateAgent = (name, values) =>
+	frappe.xcall("frappe.client.set_value", { doctype: "Flow Agent", name, fieldname: values });
+
+// Renames the document (Flow Agent's title IS its name — see updateAgent's
+// note). Returns the name actually used, which can differ slightly from
+// `newTitle` if it needed sanitizing.
+export const renameAgent = (oldName, newTitle) =>
+	frappe.xcall("frappe.client.rename_doc", {
+		doctype: "Flow Agent",
+		old_name: oldName,
+		new_name: newTitle,
+	});
 
 export const loadHistory = () =>
 	getList("Flow Session", {
 		filters: { owner: frappe.session.user, source: ["!=", "Trigger"] },
 		fields: ["name", "title", "modified"],
 		order_by: "modified desc",
-		limit: 15,
+		limit_page_length: 15,
 	});
 
 // Escape LIKE wildcards so a literal % or _ matches itself, not "anything".
@@ -43,7 +81,7 @@ export const searchSessions = (query) =>
 		},
 		fields: ["name", "title", "modified"],
 		order_by: "modified desc",
-		limit: 20,
+		limit_page_length: 20,
 	});
 
 export const getSession = (name) =>
@@ -54,7 +92,7 @@ export const getPausedRun = (session) =>
 		filters: { session, status: "Paused" },
 		fields: ["name", "questions"],
 		order_by: "creation desc",
-		limit: 1,
+		limit_page_length: 1,
 	});
 
 // Feedback the user already gave on this session's runs, to restore thumbs state on reload.
@@ -62,7 +100,7 @@ export const getRunFeedback = (session) =>
 	getList("Flow Run", {
 		filters: { session, feedback_rating: ["is", "set"] },
 		fields: ["name", "feedback_rating", "feedback_comment"],
-		limit: 100,
+		limit_page_length: 100,
 	});
 
 // Record thumbs feedback on a run; optionally store a Down comment as agent memory.

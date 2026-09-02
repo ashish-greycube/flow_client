@@ -243,5 +243,15 @@ watch(focusTick, () => nextTick(() => el.value?.focus()));
 		</div>
 
 		<p v-if="disclaimer" class="text-center text-[11px] text-ink-gray-4">{{ disclaimer }}</p>
+		<p v-if="disclaimer" class="text-center text-[11px] text-ink-gray-4">
+			{{ __("powered by") }}
+			<a
+				href="https://greycube.in/"
+				target="_blank"
+				rel="noopener noreferrer"
+				class="font-medium text-[#2e9bd6] underline hover:text-[#1f7fb3]"
+				>{{ __("GreyCube Technologies") }}</a
+			>
+		</p>
 	</div>
 </template>

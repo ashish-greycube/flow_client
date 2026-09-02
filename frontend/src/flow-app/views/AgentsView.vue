@@ -1,9 +1,12 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import SearchInput from "@/components/SearchInput.vue";
 import { Button, FeatherIcon, Spinner } from "@/lib/ui";
 import { __ } from "@/lib/translate";
 import { loadAllAgents } from "@/api/client";
+
+const router = useRouter();
 
 // Flow has no marketplace/catalog concept (installs, versions, publishers)
 // like Jarvis's Agents page does — these tabs map onto what a Flow Agent
@@ -21,6 +24,9 @@ const activeTab = ref("featured");
 const query = ref("");
 
 onMounted(async () => {
+	// A fresh fetch every time this view mounts, including on returning here
+	// from Edit/New (a route change unmounts and remounts it), so the list is
+	// never stale after a save/delete.
 	try {
 		agents.value = await loadAllAgents();
 	} finally {
@@ -68,18 +74,18 @@ function description(text) {
 }
 
 function openAgent(name) {
-	frappe.set_route("Form", "Flow Agent", name);
+	router.push({ name: "agent-edit", params: { name } });
 }
 
 function newAgent() {
-	frappe.new_doc("Flow Agent");
+	router.push({ name: "agent-new" });
 }
 </script>
 
 <template>
 	<div class="relative flex min-w-0 flex-1 flex-col bg-surface-white text-ink-gray-9">
 		<header class="flex items-center justify-between border-b border-outline-gray-1 px-6 py-4">
-			<h1 class="text-lg font-semibold text-ink-gray-9">{{ __("Agents") }}</h1>
+			<h1 class="text-lg font-normal text-ink-gray-9">{{ __("Agents") }}</h1>
 			<Button variant="solid" @click="newAgent">
 				<template #prefix><FeatherIcon name="plus" class="h-3.5 w-3.5" /></template>
 				{{ __("New Agent") }}
@@ -91,11 +97,7 @@ function newAgent() {
 				v-for="tab in TABS"
 				:key="tab.key"
 				class="relative flex items-center gap-1.5 px-1 py-3 text-sm"
-				:class="
-					activeTab === tab.key
-						? 'font-medium text-ink-gray-9'
-						: 'text-ink-gray-5 hover:text-ink-gray-8'
-				"
+				:class="activeTab === tab.key ? 'text-ink-gray-9' : 'text-ink-gray-5 hover:text-ink-gray-8'"
 				@click="activeTab = tab.key"
 			>
 				{{ tab.label }}
@@ -135,7 +137,7 @@ function newAgent() {
 				>
 					<div class="flex items-start gap-3">
 						<span
-							class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-gray-2 text-xs font-semibold text-ink-gray-7"
+							class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-gray-2 text-xs font-normal text-ink-gray-7"
 							>{{ initials(a.title) }}</span
 						>
 						<div class="min-w-0 flex-1">
@@ -146,7 +148,7 @@ function newAgent() {
 						</div>
 					</div>
 
-					<p class="line-clamp-3 text-sm font-normal text-ink-gray-6">
+					<p class="line-clamp-3 text-sm font-normal leading-tight text-ink-gray-6">
 					{{ description(a.instructions) }}
 				</p>
 

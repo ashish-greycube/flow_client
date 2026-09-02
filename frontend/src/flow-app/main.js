@@ -1,6 +1,6 @@
 import { createApp } from "vue";
 import Shell from "./Shell.vue";
-import { router } from "./router";
+import { router, attachFrappeRouteSync } from "./router";
 import "@/index.css";
 import "./theme.css";
 
@@ -28,6 +28,7 @@ function mount(elementId) {
 	});
 
 	createApp(Shell).use(router).mount(root);
+	attachFrappeRouteSync();
 }
 
 window.mountFlowChat = mount;
