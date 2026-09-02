@@ -4,11 +4,24 @@ export { default as Button } from "frappe-ui/src/components/Button/Button.vue";
 export { default as FeatherIcon } from "frappe-ui/src/components/FeatherIcon.vue";
 export { default as Spinner } from "frappe-ui/src/components/Spinner.vue";
 export { default as Badge } from "frappe-ui/src/components/Badge/Badge.vue";
-// TextInput/Textarea directly, not the FormControl dispatcher: FormControl's
-// other branches (Combobox/Autocomplete/DatePicker/...) pull in unplugin-icons
-// virtual imports this bundle would otherwise need a whole extra Vite plugin
-// for, just to support two field types we don't use.
+// Every component here is imported straight from its own source file rather
+// than through frappe-ui's `FormControl` dispatcher: FormControl eagerly
+// imports every field-type branch it supports (including icon-heavy ones like
+// Rating), which drags in unplugin-icons virtual imports this bundle would
+// otherwise need a whole extra Vite plugin for. Importing a component
+// directly, as below, only pulls in what that component itself needs —
+// verified none of these have an unplugin-icons dependency of their own.
 export { default as TextInput } from "frappe-ui/src/components/TextInput/TextInput.vue";
 export { default as Textarea } from "frappe-ui/src/components/Textarea/Textarea.vue";
 export { default as Switch } from "frappe-ui/src/components/Switch/Switch.vue";
 export { default as Breadcrumbs } from "frappe-ui/src/components/Breadcrumbs/Breadcrumbs.vue";
+export { default as Avatar } from "frappe-ui/src/components/Avatar/Avatar.vue";
+export { default as Progress } from "frappe-ui/src/components/Progress/Progress.vue";
+export { default as TabButtons } from "frappe-ui/src/components/TabButtons/TabButtons.vue";
+// Dropdown/Combobox teleport their popover content out of the DOM tree they're
+// mounted in. Both accept `portalTo`, which every usage here must set to
+// `"#flow-root"` — the panel's CSS is scoped to that id at build time
+// (postcss-prefix-selector), so content teleported to `document.body` (the
+// default) would render completely unstyled.
+export { default as Dropdown } from "frappe-ui/src/components/Dropdown/Dropdown.vue";
+export { default as Combobox } from "frappe-ui/src/components/Combobox/Combobox.vue";

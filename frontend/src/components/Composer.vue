@@ -1,8 +1,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
-import PanelDropdown from "./PanelDropdown.vue";
 import AttachmentChip from "./AttachmentChip.vue";
-import { Button, FeatherIcon } from "@/lib/ui";
+import { Button, FeatherIcon, Combobox } from "@/lib/ui";
 import { useStore } from "@/store";
 import { __ } from "@/lib/translate";
 
@@ -167,19 +166,20 @@ watch(focusTick, () => nextTick(() => el.value?.focus()));
 			/>
 
 			<!-- agent -->
-			<PanelDropdown
-				:items="agentItems"
+			<Combobox
+				trigger="button"
+				:options="agentItems"
 				:model-value="selectedAgent"
 				:disabled="locked"
-				searchable
+				portal-to="#flow-root"
 				@update:model-value="setAgent"
 			>
-				<template #trigger="{ toggle }">
+				<template #trigger="{ toggleOpen }">
 					<button
 						class="flex h-6 items-center gap-1 rounded px-1.5 text-[12.5px] text-ink-gray-6 hover:bg-surface-gray-2 disabled:cursor-default disabled:hover:bg-transparent"
 						:disabled="locked"
 						:title="__('Agent')"
-						@click="toggle"
+						@click="toggleOpen"
 					>
 						<span class="font-medium text-ink-gray-8">{{
 							agentLabel(selectedAgent)
@@ -187,22 +187,23 @@ watch(focusTick, () => nextTick(() => el.value?.focus()));
 						<FeatherIcon v-if="!locked" name="chevron-down" class="h-3 w-3" />
 					</button>
 				</template>
-			</PanelDropdown>
+			</Combobox>
 
 			<span class="text-ink-gray-3">/</span>
 
 			<!-- model -->
-			<PanelDropdown
-				:items="modelItems"
+			<Combobox
+				trigger="button"
+				:options="modelItems"
 				:model-value="selectedModel"
-				searchable
+				portal-to="#flow-root"
 				@update:model-value="setModel"
 			>
-				<template #trigger="{ toggle }">
+				<template #trigger="{ toggleOpen }">
 					<button
 						class="flex h-6 items-center gap-1 rounded px-1.5 text-[12.5px] text-ink-gray-6 hover:bg-surface-gray-2"
 						:title="__('Model')"
-						@click="toggle"
+						@click="toggleOpen"
 					>
 						<span class="font-medium text-ink-gray-8">
 							{{ modelLabel(selectedModel) || __("Default") }}
@@ -210,7 +211,7 @@ watch(focusTick, () => nextTick(() => el.value?.focus()));
 						<FeatherIcon name="chevron-down" class="h-3 w-3" />
 					</button>
 				</template>
-			</PanelDropdown>
+			</Combobox>
 
 			<!-- host-supplied extras (e.g. the chat page's tool-permissions trigger) —
 			     kept out of this shared component so it stays agnostic of page-specific

@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import SearchInput from "@/components/SearchInput.vue";
-import { Button, FeatherIcon, Spinner } from "@/lib/ui";
+import { Button, FeatherIcon, Spinner, Badge } from "@/lib/ui";
 import { __ } from "@/lib/translate";
 import { loadAllAgents } from "@/api/client";
 
@@ -153,20 +153,12 @@ function newAgent() {
 				</p>
 
 					<div class="mt-auto flex items-center gap-1.5">
-						<span
-							class="rounded-full px-2 py-0.5 text-xs"
-							:class="
-								a.enabled
-									? 'bg-surface-green-2 text-ink-green-2'
-									: 'bg-surface-gray-2 text-ink-gray-6'
-							"
-							>{{ a.enabled ? __("Enabled") : __("Disabled") }}</span
-						>
-						<span
-							v-if="a.is_system_generated"
-							class="rounded-full bg-surface-gray-2 px-2 py-0.5 text-xs text-ink-gray-6"
-							>{{ __("Featured") }}</span
-						>
+						<Badge
+							variant="subtle"
+							:theme="a.enabled ? 'green' : 'gray'"
+							:label="a.enabled ? __('Enabled') : __('Disabled')"
+						/>
+						<Badge v-if="a.is_system_generated" variant="subtle" theme="gray" :label="__('Featured')" />
 					</div>
 				</button>
 			</div>

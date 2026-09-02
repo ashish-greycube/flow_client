@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, nextTick } from "vue";
-import { Button, FeatherIcon } from "@/lib/ui";
+import { Button, FeatherIcon, Textarea } from "@/lib/ui";
 import { useStore } from "@/store";
 import { __ } from "@/lib/translate";
 
@@ -34,7 +34,7 @@ async function rateDown() {
 	}
 	comment.value = props.message.feedback?.comment || "";
 	open.value = true;
-	nextTick(() => commentEl.value?.focus());
+	nextTick(() => commentEl.value?.el?.focus());
 }
 
 function cancel() {
@@ -99,15 +99,17 @@ async function submit(value, text = "") {
 			v-if="open"
 			class="mt-1.5 rounded-lg border border-outline-gray-2 bg-surface-white p-2.5"
 		>
-			<textarea
+			<Textarea
 				ref="commentEl"
-				v-model="comment"
-				rows="2"
+				variant="outline"
+				:model-value="comment"
+				:rows="2"
 				:maxlength="COMMENT_LIMIT"
-				class="flow-textarea w-full resize-none rounded-md border border-outline-gray-2 bg-surface-white px-2.5 py-2 text-sm text-ink-gray-9 outline-none focus:border-outline-gray-3"
+				class="flow-textarea resize-none"
 				:placeholder="__('What went wrong? How should it respond instead?')"
+				@update:model-value="(v) => (comment = v)"
 				@keydown.esc="cancel"
-			></textarea>
+			/>
 			<div class="mt-1.5 flex justify-end gap-1.5">
 				<Button variant="ghost" :label="__('Cancel')" @click="cancel" />
 				<Button

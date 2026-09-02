@@ -27,7 +27,7 @@ onMounted(() => loadInitial());
 // `important: true` (so its utilities can out-rank the desk's own Bootstrap
 // classes), which means a `flex`/`block` utility's `!important` beats v-show's
 // plain inline `display:none` — the same reason every other conditional panel
-// in this app (PanelDropdown, the dialogs) uses `v-if`. That destroys and
+// in this app (SessionsMenu, the dialogs) uses `v-if`. That destroys and
 // remounts the composer each time it opens, so the ResizeObserver — which
 // sizes the message list's bottom padding to the composer's live height via
 // --flow-composer-h — is (re)wired here instead of once in onMounted.

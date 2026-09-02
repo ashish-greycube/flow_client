@@ -1,9 +1,19 @@
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import PanelDropdown from "@/components/PanelDropdown.vue";
 import DocSection from "@/components/DocSection.vue";
-import { Button, FeatherIcon, Spinner, Badge, TextInput, Textarea, Switch, Breadcrumbs } from "@/lib/ui";
+import PanelDropdown from "@/components/PanelDropdown.vue";
+import {
+	Button,
+	FeatherIcon,
+	Spinner,
+	Badge,
+	TextInput,
+	Textarea,
+	Switch,
+	Breadcrumbs,
+	Combobox,
+} from "@/lib/ui";
 import { __ } from "@/lib/translate";
 import {
 	loadModels,
@@ -415,14 +425,13 @@ async function save() {
 									</template>
 								</PanelDropdown>
 
-								<button
-									class="flex h-8 w-6 shrink-0 items-center justify-center rounded-md text-ink-gray-5 hover:bg-surface-gray-2 hover:text-ink-gray-8"
+								<Button
+									variant="ghost"
+									icon="x"
 									:disabled="saving"
 									:title="__('Remove tool')"
 									@click="removeToolRow(index)"
-								>
-									<FeatherIcon name="x" class="h-3.5 w-3.5" />
-								</button>
+								/>
 							</div>
 
 							<button
@@ -440,39 +449,31 @@ async function save() {
 						<div
 							class="flex flex-wrap items-center gap-1.5 rounded-md border border-outline-gray-2 bg-surface-white p-1.5"
 						>
-							<span
-								v-for="kb in form.knowledge_bases"
-								:key="kb"
-								class="flex items-center gap-1 rounded-md bg-surface-gray-2 px-2 py-1 text-xs font-normal text-ink-gray-8"
-							>
+							<Badge v-for="kb in form.knowledge_bases" :key="kb" variant="subtle" theme="gray">
 								{{ knowledgeBaseLabel(kb) }}
-								<button
-									class="text-ink-gray-5 hover:text-ink-gray-8"
-									:disabled="saving"
-									:title="__('Remove')"
-									@click="removeKnowledgeBase(kb)"
-								>
-									<FeatherIcon name="x" class="h-3 w-3" />
-								</button>
-							</span>
+								<template #suffix>
+									<Button
+										variant="ghost"
+										size="xs"
+										icon="x"
+										:disabled="saving"
+										:title="__('Remove')"
+										@click="removeKnowledgeBase(kb)"
+									/>
+								</template>
+							</Badge>
 
-							<PanelDropdown
-								:items="availableKnowledgeBaseItems"
-								:disabled="saving"
-								placement="bottom"
-								searchable
-								@update:model-value="addKnowledgeBase"
-							>
-								<template #trigger="{ toggle }">
+							<Combobox trigger="button" :options="availableKnowledgeBaseItems" :disabled="saving" portal-to="#flow-root" @update:model-value="addKnowledgeBase">
+								<template #trigger="{ toggleOpen }">
 									<button
 										class="flex items-center gap-1 rounded-md px-1.5 py-1 text-xs text-ink-gray-5 hover:bg-surface-gray-2 hover:text-ink-gray-8"
-										@click="toggle"
+										@click="toggleOpen"
 									>
 										<FeatherIcon name="plus" class="h-3.5 w-3.5" />
 										{{ __("Add") }}
 									</button>
 								</template>
-							</PanelDropdown>
+							</Combobox>
 						</div>
 					</DocSection>
 				</div>

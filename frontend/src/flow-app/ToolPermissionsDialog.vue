@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import PanelDropdown from "@/components/PanelDropdown.vue";
-import { Button, FeatherIcon, Spinner } from "@/lib/ui";
+import { Button, Badge, FeatherIcon, Spinner } from "@/lib/ui";
 import { __ } from "@/lib/translate";
 import { getAgentToolPermissions, setAgentToolPermissions } from "@/api/client";
 
@@ -134,9 +134,7 @@ function groupLabel(list) {
 							<span class="text-sm font-medium text-ink-gray-8">{{
 								__("Read-only tools")
 							}}</span>
-							<span class="rounded-full bg-surface-gray-2 px-1.5 py-0.5 text-xs text-ink-gray-6">{{
-								readOnly.length
-							}}</span>
+							<Badge variant="subtle" theme="gray" :label="String(readOnly.length)" />
 						</div>
 						<PanelDropdown
 							:items="PERMISSION_ITEMS"
@@ -189,9 +187,7 @@ function groupLabel(list) {
 							<span class="text-sm font-medium text-ink-gray-8">{{
 								__("Write/delete tools")
 							}}</span>
-							<span class="rounded-full bg-surface-gray-2 px-1.5 py-0.5 text-xs text-ink-gray-6">{{
-								writeDelete.length
-							}}</span>
+							<Badge variant="subtle" theme="gray" :label="String(writeDelete.length)" />
 						</div>
 						<PanelDropdown
 							:items="PERMISSION_ITEMS"

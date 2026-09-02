@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, nextTick } from "vue";
-import { Button, FeatherIcon } from "@/lib/ui";
+import { Button, FeatherIcon, Textarea } from "@/lib/ui";
 import ArgsView from "./ArgsView.vue";
 import { confirmTitle, hasArgs, parseArgs, blockKeysFor } from "@/lib/toolMeta";
 import { __ } from "@/lib/translate";
@@ -47,7 +47,7 @@ function pick(option) {
 }
 function showOther() {
 	props.question._showOther = true;
-	nextTick(() => otherEl.value?.focus());
+	nextTick(() => otherEl.value?.el?.focus());
 }
 function cancelOther() {
 	props.question._showOther = false;
@@ -107,15 +107,17 @@ function sendOther() {
 			</div>
 
 			<div v-else class="mt-2.5">
-				<textarea
+				<Textarea
 					ref="otherEl"
-					v-model="question._otherText"
-					rows="2"
-					class="flow-textarea w-full resize-none rounded-md border border-outline-gray-2 bg-surface-white px-2.5 py-2 text-sm text-ink-gray-9 outline-none focus:border-outline-gray-3"
+					variant="outline"
+					:model-value="question._otherText"
+					:rows="2"
+					class="flow-textarea resize-none"
 					:placeholder="__('Describe what you want instead…')"
+					@update:model-value="(v) => (question._otherText = v)"
 					@keydown.enter.exact.prevent="sendOther"
 					@keydown.esc="cancelOther"
-				></textarea>
+				/>
 				<div class="mt-1.5 flex justify-end gap-1.5">
 					<Button variant="ghost" :label="__('Cancel')" @click="cancelOther" />
 					<Button

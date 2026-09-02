@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import SearchInput from "@/components/SearchInput.vue";
-import { Button, FeatherIcon, Spinner } from "@/lib/ui";
+import { Button, FeatherIcon, Spinner, Badge } from "@/lib/ui";
 import { __ } from "@/lib/translate";
 import { loadAllKnowledgeBases } from "@/api/client";
 
@@ -106,20 +106,12 @@ function newKnowledgeBase() {
 					</p>
 
 					<div class="mt-auto flex items-center gap-1.5">
-						<span
-							class="rounded-full px-2 py-0.5 text-xs"
-							:class="
-								k.enabled
-									? 'bg-surface-green-2 text-ink-green-2'
-									: 'bg-surface-gray-2 text-ink-gray-6'
-							"
-							>{{ k.enabled ? __("Enabled") : __("Disabled") }}</span
-						>
-						<span
-							v-if="k.is_system_generated"
-							class="rounded-full bg-surface-gray-2 px-2 py-0.5 text-xs text-ink-gray-6"
-							>{{ __("Featured") }}</span
-						>
+						<Badge
+							variant="subtle"
+							:theme="k.enabled ? 'green' : 'gray'"
+							:label="k.enabled ? __('Enabled') : __('Disabled')"
+						/>
+						<Badge v-if="k.is_system_generated" variant="subtle" theme="gray" :label="__('Featured')" />
 					</div>
 				</button>
 			</div>

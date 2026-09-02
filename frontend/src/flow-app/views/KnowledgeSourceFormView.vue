@@ -156,10 +156,10 @@ function fileName(url) {
 }
 
 function statusTheme(status) {
-	if (status === "Completed") return "bg-surface-green-2 text-ink-green-2";
-	if (status === "Failed") return "bg-surface-red-2 text-ink-red-2";
-	if (status === "Processing") return "bg-surface-orange-2 text-ink-orange-2";
-	return "bg-surface-gray-2 text-ink-gray-6";
+	if (status === "Completed") return "green";
+	if (status === "Failed") return "red";
+	if (status === "Processing") return "orange";
+	return "gray";
 }
 
 function formatDatetime(value) {
@@ -603,9 +603,7 @@ async function reconcile() {
 						<div class="grid grid-cols-3 gap-4">
 							<div>
 								<label class="mb-1.5 block text-xs text-ink-gray-5">{{ __("Status") }}</label>
-								<span class="rounded-full px-2 py-1 text-xs" :class="statusTheme(form.status)">{{
-									form.status
-								}}</span>
+								<Badge variant="subtle" :theme="statusTheme(form.status)" :label="form.status" />
 							</div>
 							<div>
 								<label class="mb-1.5 block text-xs text-ink-gray-5">{{ __("Chunk Count") }}</label>

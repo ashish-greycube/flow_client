@@ -187,10 +187,10 @@ async function save() {
 }
 
 function statusTheme(status) {
-	if (status === "Completed") return "bg-surface-green-2 text-ink-green-2";
-	if (status === "Failed") return "bg-surface-red-2 text-ink-red-2";
-	if (status === "Processing") return "bg-surface-orange-2 text-ink-orange-2";
-	return "bg-surface-gray-2 text-ink-gray-6";
+	if (status === "Completed") return "green";
+	if (status === "Failed") return "red";
+	if (status === "Processing") return "orange";
+	return "gray";
 }
 
 function openSource(source) {
@@ -284,11 +284,7 @@ function newSource() {
 								<span class="shrink-0 text-xs text-ink-gray-5">
 									{{ __("{0} chunks", [s.chunk_count || 0]) }}
 								</span>
-								<span
-									class="shrink-0 rounded-full px-2 py-0.5 text-xs"
-									:class="statusTheme(s.status)"
-									>{{ s.status }}</span
-								>
+								<Badge variant="subtle" :theme="statusTheme(s.status)" :label="s.status" />
 							</button>
 
 							<button

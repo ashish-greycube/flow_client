@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
-import { Button, FeatherIcon } from "@/lib/ui";
+import { Button, FeatherIcon, TextInput } from "@/lib/ui";
 import { __ } from "@/lib/translate";
 import { createMacroFromPrompts } from "@/api/client";
 
@@ -26,7 +26,7 @@ watch(
 	(open) => {
 		if (!open) return;
 		name.value = props.defaultName || "";
-		nextTick(() => nameInput.value?.focus());
+		nextTick(() => nameInput.value?.el?.focus());
 	}
 );
 
@@ -83,19 +83,15 @@ async function save() {
 			</header>
 
 			<div class="flex flex-col gap-3 overflow-y-auto px-4 py-4 flow-scrollbar">
-				<div>
-					<label class="mb-1 block text-xs font-medium text-ink-gray-6">{{
-						__("Macro name")
-					}}</label>
-					<input
-						ref="nameInput"
-						v-model="name"
-						type="text"
-						:placeholder="__('e.g. Weekly overdue invoice check')"
-						class="h-8 w-full rounded-md border border-outline-gray-2 bg-surface-white px-2.5 text-sm text-ink-gray-9 outline-none focus:border-outline-gray-3"
-						@keydown.enter="save"
-					/>
-				</div>
+				<TextInput
+					ref="nameInput"
+					type="text"
+					:label="__('Macro name')"
+					:model-value="name"
+					:placeholder="__('e.g. Weekly overdue invoice check')"
+					@update:model-value="(v) => (name = v)"
+					@keydown.enter="save"
+				/>
 
 				<div v-if="agentLabel" class="text-xs text-ink-gray-5">
 					{{ __("Runs through the {0} agent", [agentLabel]) }}
