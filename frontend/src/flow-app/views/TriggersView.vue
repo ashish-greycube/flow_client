@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 import SearchInput from "@/components/SearchInput.vue";
 import { Button, FeatherIcon, Spinner } from "@/lib/ui";
 import { __ } from "@/lib/translate";
-import { loadMacros, runMacro } from "@/api/macros";
+import { loadTriggers } from "@/api/triggers";
 
 const TABS = [
 	{ key: "enabled", label: __("Enabled") },
@@ -13,67 +13,68 @@ const TABS = [
 
 const router = useRouter();
 const loading = ref(true);
-const running = ref("");
 const query = ref("");
-const macros = ref([]);
+const triggers = ref([]);
 const activeTab = ref("enabled");
 
 const tabbed = computed(() =>
-	macros.value.filter((macro) =>
-		activeTab.value === "enabled" ? macro.enabled : !macro.enabled,
+	triggers.value.filter((trigger) =>
+		activeTab.value === "enabled" ? trigger.enabled : !trigger.enabled,
 	),
 );
 
 const filtered = computed(() => {
 	const value = query.value.trim().toLowerCase();
 	if (!value) return tabbed.value;
-	return tabbed.value.filter((macro) =>
-		[macro.macro_name, macro.description, macro.agent].some((field) =>
-			(field || "").toLowerCase().includes(value),
-		),
+	return tabbed.value.filter((trigger) =>
+		[
+			trigger.title,
+			trigger.agent,
+			trigger.event,
+			trigger.target_doctype,
+			trigger.prompt_template,
+		].some((field) => (field || "").toLowerCase().includes(value)),
 	);
 });
-
-function tabCount(key) {
-	return macros.value.filter((macro) => (key === "enabled" ? macro.enabled : !macro.enabled))
-		.length;
-}
 
 onMounted(refresh);
 
 async function refresh() {
 	loading.value = true;
 	try {
-		macros.value = await loadMacros();
+		triggers.value = await loadTriggers();
 	} catch (error) {
-		showError(error, __("Could not load macros."));
+		showError(error, __("Could not load triggers."));
 	} finally {
 		loading.value = false;
 	}
 }
 
-async function run(macro) {
-	running.value = macro.name;
-	try {
-		const result = await runMacro(macro.name);
-		router.push({ name: "macro-run", params: { name: result.macro_run } });
-	} catch (error) {
-		showError(error, __("Could not run macro."));
-	} finally {
-		running.value = "";
-	}
+function tabCount(key) {
+	return triggers.value.filter((trigger) =>
+		key === "enabled" ? trigger.enabled : !trigger.enabled,
+	).length;
 }
 
-function showError(error, fallback) {
-	frappe.show_alert({ message: error?.message || fallback, indicator: "red" });
+function eventSummary(trigger) {
+	if (trigger.event === "Scheduled") {
+		return trigger.cron_expression || __("Schedule not set");
+	}
+	const event = (trigger.doc_event || "").replaceAll("_", " ");
+	return [trigger.target_doctype, event].filter(Boolean).join(" · ") || __("Event not set");
+}
+
+function promptSummary(value) {
+	const text = (value || "").replace(/\s+/g, " ").trim();
+	return text || __("No prompt set");
 }
 
 function timeAgo(value) {
 	return value && window.moment ? moment(value).fromNow() : value || "";
 }
 
-function canRun(macro) {
-	return macro.owner === frappe.session.user || frappe.session.user === "Administrator";
+function showError(error, fallback) {
+	frappe.show_alert({ message: error?.message || fallback, indicator: "red" });
 }
 </script>
 
@@ -82,10 +83,10 @@ function canRun(macro) {
 		class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-surface-white text-ink-gray-9"
 	>
 		<header class="flex items-center justify-between border-b border-outline-gray-1 px-6 py-4">
-			<h1 class="text-lg font-normal text-ink-gray-9">{{ __("Macros") }}</h1>
-			<Button variant="solid" @click="router.push({ name: 'macro-new' })">
+			<h1 class="text-lg font-normal text-ink-gray-9">{{ __("Triggers") }}</h1>
+			<Button variant="solid" @click="router.push({ name: 'trigger-new' })">
 				<template #prefix><FeatherIcon name="plus" class="h-3.5 w-3.5" /></template>
-				{{ __("New Macro") }}
+				{{ __("New Trigger") }}
 			</Button>
 		</header>
 
@@ -115,7 +116,7 @@ function canRun(macro) {
 		<div class="px-6 py-4">
 			<SearchInput
 				v-model="query"
-				:placeholder="__('Search macros…')"
+				:placeholder="__('Search triggers…')"
 				class="max-w-sm rounded-lg border border-outline-gray-2"
 			/>
 		</div>
@@ -125,65 +126,72 @@ function canRun(macro) {
 				<Spinner class="h-5 w-5 text-ink-gray-5" />
 			</div>
 			<div v-else-if="!filtered.length" class="flex flex-col items-center py-16 text-center">
-				<FeatherIcon name="layers" class="mb-3 h-8 w-8 text-ink-gray-4" />
-				<p class="font-normal text-ink-gray-8">{{ __("No macros found") }}</p>
+				<FeatherIcon name="zap" class="mb-3 h-8 w-8 text-ink-gray-4" />
+				<p class="font-normal text-ink-gray-8">{{ __("No triggers found") }}</p>
 				<p class="mt-1 text-sm font-normal text-ink-gray-5">
 					{{
 						query.trim()
 							? __("Try a different search.")
 							: activeTab === "enabled"
-								? __("Create or enable a macro to reuse a workflow.")
-								: __("No macros are disabled.")
+								? __("Create or enable a trigger to automate an agent.")
+								: __("No triggers are disabled.")
 					}}
 				</p>
 			</div>
 			<div v-else class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
 				<article
-					v-for="macro in filtered"
-					:key="macro.name"
-					class="group flex min-h-36 cursor-pointer flex-col gap-3 rounded-xl border border-outline-gray-1 bg-surface-white p-4 text-left transition hover:border-outline-gray-3 hover:shadow-sm"
-					@click="router.push({ name: 'macro', params: { name: macro.name } })"
+					v-for="trigger in filtered"
+					:key="trigger.name"
+					class="group flex min-h-40 cursor-pointer flex-col gap-3 rounded-xl border border-outline-gray-1 bg-surface-white p-4 text-left transition hover:border-outline-gray-3 hover:shadow-sm"
+					@click="router.push({ name: 'trigger', params: { name: trigger.name } })"
 				>
 					<div class="flex items-start gap-3">
 						<span
 							class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-gray-2"
 						>
-							<FeatherIcon name="layers" class="h-4 w-4 text-ink-gray-6" />
+							<FeatherIcon name="zap" class="h-4 w-4 text-ink-gray-6" />
 						</span>
 						<div class="min-w-0 flex-1">
 							<p class="truncate text-sm font-semibold text-ink-gray-9">
-								{{ macro.macro_name }}
+								{{ trigger.title }}
 							</p>
 							<p class="truncate text-xs font-normal text-ink-gray-5">
-								{{ macro.agent }}
+								{{ trigger.agent }}
 							</p>
 						</div>
-						<Button
-							variant="ghost"
-							icon="play"
-							:loading="running === macro.name"
-							:disabled="!macro.enabled || !canRun(macro) || !!running"
-							@click.stop="run(macro)"
-						/>
+						<span
+							class="rounded-full bg-surface-gray-2 px-2 py-0.5 text-xs text-ink-gray-6"
+						>
+							{{ trigger.event }}
+						</span>
 					</div>
-					<p class="line-clamp-2 text-sm font-normal leading-tight text-ink-gray-6">
-						{{ macro.description || __("No description") }}
-					</p>
+
+					<div>
+						<p class="truncate text-xs font-medium capitalize text-ink-gray-7">
+							{{ eventSummary(trigger) }}
+						</p>
+						<p
+							class="mt-1 line-clamp-2 text-sm font-normal leading-tight text-ink-gray-6"
+						>
+							{{ promptSummary(trigger.prompt_template) }}
+						</p>
+					</div>
+
 					<div
 						class="mt-auto flex items-center justify-between gap-2 border-t border-outline-gray-1 pt-3"
 					>
 						<span
 							class="rounded-full px-2 py-0.5 text-xs"
 							:class="
-								macro.enabled
+								trigger.enabled
 									? 'bg-surface-green-2 text-ink-green-2'
 									: 'bg-surface-gray-2 text-ink-gray-6'
 							"
 						>
-							{{ macro.enabled ? __("Enabled") : __("Disabled") }}
+							{{ trigger.enabled ? __("Enabled") : __("Disabled") }}
 						</span>
 						<p class="shrink-0 text-xs font-normal text-ink-gray-5">
-							{{ timeAgo(macro.modified) }}
+							{{ timeAgo(trigger.modified) }}
 						</p>
 					</div>
 				</article>

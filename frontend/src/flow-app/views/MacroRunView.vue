@@ -1,8 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import ViewHeader from "../components/ViewHeader.vue";
-import { Badge, Button, FeatherIcon, Spinner } from "@/lib/ui";
+import { Badge, Breadcrumbs, Button, FeatherIcon, Spinner } from "@/lib/ui";
 import { __ } from "@/lib/translate";
 import { loadMacro, loadMacroRun, stopMacroRun } from "@/api/macros";
 
@@ -28,6 +27,20 @@ const statusTheme = computed(
 			run.value?.status
 		] || "gray",
 );
+const breadcrumbs = computed(() => {
+	const items = [{ label: __("Macros"), route: { name: "macros" } }];
+	if (run.value?.macro) {
+		items.push({
+			label: macroTitle.value || run.value.macro,
+			route: { name: "macro", params: { name: run.value.macro } },
+		});
+	}
+	items.push({
+		label: __("Macro Run"),
+		route: { name: "macro-run", params: { name: props.name } },
+	});
+	return items;
+});
 
 onMounted(refresh);
 onUnmounted(() => clearTimeout(timer));
@@ -72,42 +85,50 @@ function openSession() {
 	router.push({ name: "chat", query: { session: run.value.session } });
 }
 
-function goBack() {
-	if (run.value?.macro) router.push({ name: "macro", params: { name: run.value.macro } });
-	else router.push({ name: "macros" });
-}
-
 function formatDate(value) {
 	return value && window.moment ? moment(value).format("lll") : value || "—";
 }
 </script>
 
 <template>
-	<main class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-surface-white">
-		<ViewHeader :title="__('Macro Run')" back @back="goBack">
-			<Button icon="refresh-cw" variant="ghost" :loading="loading" @click="refresh" />
-			<Button
-				v-if="active && canStop"
-				theme="red"
-				variant="subtle"
-				:loading="stopping"
-				@click="stop"
-			>
-				{{ __("Stop") }}
-			</Button>
-		</ViewHeader>
+	<main
+		class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-surface-white text-ink-gray-9"
+	>
+		<header class="flex items-center justify-between border-b border-outline-gray-1 px-6 py-4">
+			<Breadcrumbs :items="breadcrumbs" />
+			<div class="flex items-center gap-2">
+				<Button icon="refresh-cw" variant="ghost" :loading="loading" @click="refresh" />
+				<Button
+					v-if="active && canStop"
+					theme="red"
+					variant="subtle"
+					:loading="stopping"
+					@click="stop"
+				>
+					{{ __("Stop") }}
+				</Button>
+			</div>
+		</header>
 
 		<div v-if="loading && !run" class="flex min-h-0 flex-1 items-center justify-center">
 			<Spinner class="h-5 w-5 text-ink-gray-5" />
 		</div>
-		<div v-else-if="run" class="flow-scrollbar min-h-0 flex-1 overflow-y-auto">
-			<div class="w-full space-y-6 px-6 py-6">
+		<div v-else-if="run" class="flow-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-6">
+			<div class="mx-auto w-full max-w-3xl space-y-6">
+				<div>
+					<div class="flex items-center gap-3">
+						<h1 class="min-w-0 truncate text-2xl font-semibold text-ink-gray-9">
+							{{ __("Macro Run") }}
+						</h1>
+						<Badge :theme="statusTheme" variant="subtle">{{ run.status }}</Badge>
+					</div>
+					<p class="mt-1 text-xs font-normal text-ink-gray-5">{{ run.name }}</p>
+				</div>
 				<section class="rounded-xl border border-outline-gray-1 p-5">
 					<div class="flex items-start justify-between gap-4">
 						<div>
-							<p class="text-xs font-normal text-ink-gray-5">{{ run.name }}</p>
 							<button
-								class="mt-1 text-left text-lg font-medium text-ink-gray-9 hover:underline"
+								class="text-left text-lg font-medium text-ink-gray-9 hover:underline"
 								@click="
 									router.push({ name: 'macro', params: { name: run.macro } })
 								"
@@ -115,7 +136,6 @@ function formatDate(value) {
 								{{ macroTitle || run.macro }}
 							</button>
 						</div>
-						<Badge :theme="statusTheme" variant="subtle">{{ run.status }}</Badge>
 					</div>
 					<div class="mt-5 h-2 overflow-hidden rounded-full bg-surface-gray-2">
 						<div

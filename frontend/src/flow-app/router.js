@@ -5,6 +5,11 @@ import AgentFormView from "./views/AgentFormView.vue";
 import MacrosView from "./views/MacrosView.vue";
 import MacroView from "./views/MacroView.vue";
 import MacroRunView from "./views/MacroRunView.vue";
+import TriggersView from "./views/TriggersView.vue";
+import TriggerView from "./views/TriggerView.vue";
+import KnowledgeBasesView from "./views/KnowledgeBasesView.vue";
+import KnowledgeBaseFormView from "./views/KnowledgeBaseFormView.vue";
+import KnowledgeSourceFormView from "./views/KnowledgeSourceFormView.vue";
 
 // Frappe treats additional segments after a Page route as route arguments, so
 // the embedded app can use clean, refresh-safe paths under /desk/flow-chat.
@@ -35,6 +40,35 @@ export const router = createRouter({
 		{ path: "/macros/new", name: "macro-new", component: MacroView, props: { isNew: true } },
 		{ path: "/macros/:name", name: "macro", component: MacroView, props: true },
 		{ path: "/macro-runs/:name", name: "macro-run", component: MacroRunView, props: true },
+		{ path: "/triggers", name: "triggers", component: TriggersView },
+		{
+			path: "/triggers/new",
+			name: "trigger-new",
+			component: TriggerView,
+			props: { isNew: true },
+		},
+		{ path: "/triggers/:name", name: "trigger", component: TriggerView, props: true },
+		{ path: "/knowledge-bases", name: "knowledge-bases", component: KnowledgeBasesView },
+		{
+			path: "/knowledge-bases/new",
+			name: "knowledge-base-new",
+			component: KnowledgeBaseFormView,
+		},
+		{
+			path: "/knowledge-bases/:name",
+			name: "knowledge-base-edit",
+			component: KnowledgeBaseFormView,
+		},
+		{
+			path: "/knowledge-bases/:name/sources/new",
+			name: "knowledge-source-new",
+			component: KnowledgeSourceFormView,
+		},
+		{
+			path: "/knowledge-bases/:name/sources/:source",
+			name: "knowledge-source-edit",
+			component: KnowledgeSourceFormView,
+		},
 	],
 });
 
@@ -44,16 +78,58 @@ function toFrappeSegments(route) {
 	if (route.name === "agents") return ["flow-chat", "agents"];
 	if (route.name === "agent-new") return ["flow-chat", "agents", "new"];
 	if (route.name === "agent-edit") return ["flow-chat", "agents", route.params.name];
+	if (route.name === "macros") return ["flow-chat", "macros"];
+	if (route.name === "macro-new") return ["flow-chat", "macros", "new"];
+	if (route.name === "macro") return ["flow-chat", "macros", route.params.name];
+	if (route.name === "macro-run") return ["flow-chat", "macro-runs", route.params.name];
+	if (route.name === "triggers") return ["flow-chat", "triggers"];
+	if (route.name === "trigger-new") return ["flow-chat", "triggers", "new"];
+	if (route.name === "trigger") return ["flow-chat", "triggers", route.params.name];
+	if (route.name === "knowledge-bases") return ["flow-chat", "knowledge-bases"];
+	if (route.name === "knowledge-base-new") return ["flow-chat", "knowledge-bases", "new"];
+	if (route.name === "knowledge-base-edit") {
+		return ["flow-chat", "knowledge-bases", route.params.name];
+	}
+	if (route.name === "knowledge-source-new") {
+		return ["flow-chat", "knowledge-bases", route.params.name, "sources", "new"];
+	}
+	if (route.name === "knowledge-source-edit") {
+		return ["flow-chat", "knowledge-bases", route.params.name, "sources", route.params.source];
+	}
 	return ["flow-chat"];
 }
 
 // Frappe's current route segments -> a vue-router location to push.
 function toVueLocation(segments) {
-	const [, section, sub] = segments;
+	const [, section, sub, sourcesWord, sourceSub] = segments;
 	if (section === "agents") {
 		if (!sub) return { name: "agents" };
 		if (sub === "new") return { name: "agent-new" };
 		return { name: "agent-edit", params: { name: sub } };
+	}
+	if (section === "macros") {
+		if (!sub) return { name: "macros" };
+		if (sub === "new") return { name: "macro-new" };
+		return { name: "macro", params: { name: sub } };
+	}
+	if (section === "macro-runs" && sub) {
+		return { name: "macro-run", params: { name: sub } };
+	}
+	if (section === "triggers") {
+		if (!sub) return { name: "triggers" };
+		if (sub === "new") return { name: "trigger-new" };
+		return { name: "trigger", params: { name: sub } };
+	}
+	if (section === "knowledge-bases") {
+		if (!sub) return { name: "knowledge-bases" };
+		if (sub === "new") return { name: "knowledge-base-new" };
+		if (sourcesWord === "sources") {
+			if (sourceSub === "new") return { name: "knowledge-source-new", params: { name: sub } };
+			if (sourceSub) {
+				return { name: "knowledge-source-edit", params: { name: sub, source: sourceSub } };
+			}
+		}
+		return { name: "knowledge-base-edit", params: { name: sub } };
 	}
 	return { name: "chat" };
 }

@@ -67,3 +67,10 @@
 	font-size: 13px !important;
 	font-weight: 400 !important;
 }
+
+/* Keep document-editor breadcrumbs compact beside the header actions. */
+.flow-editor-breadcrumbs a,
+.flow-editor-breadcrumbs button,
+.flow-editor-breadcrumbs span {
+	font-size: 15px !important;
+}

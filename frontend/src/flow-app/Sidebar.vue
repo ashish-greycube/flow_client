@@ -13,9 +13,11 @@ const route = useRoute();
 const { recentSessions, sessionName, switchSession, newChat, sending, refreshHistory } =
 	useStore();
 
+const SIDEBAR_STORAGE_KEY = "flow-sidebar-collapsed";
 const query = ref("");
 const results = ref([]);
 const searching = ref(false);
+const collapsed = ref(readCollapsed());
 
 let debounce;
 let searchSeq = 0;
@@ -70,6 +72,23 @@ function openMacros() {
 	router.push("/macros");
 }
 
+function openKnowledgeBases() {
+	router.push("/knowledge-bases");
+}
+
+function openTriggers() {
+	router.push("/triggers");
+}
+
+function toggleSidebar() {
+	collapsed.value = !collapsed.value;
+	try {
+		localStorage.setItem(SIDEBAR_STORAGE_KEY, collapsed.value ? "1" : "0");
+	} catch {
+		// The preference is optional when browser storage is unavailable.
+	}
+}
+
 // Nav rows to the doctypes a Flow user manages directly — same list views the
 // desk already has, just one click away from the chat instead of hunting
 // through the workspace.
@@ -81,66 +100,101 @@ function timeAgo(ds) {
 	if (!ds) return "";
 	return window.moment ? moment(ds).fromNow() : ds;
 }
+
+function readCollapsed() {
+	try {
+		const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+		return saved === null ? true : saved === "1";
+	} catch {
+		return true;
+	}
+}
 </script>
 
 <template>
 	<aside
-		class="flow-sidebar flex h-full w-64 shrink-0 flex-col border-r border-outline-gray-1 bg-surface-gray-1"
+		class="flow-sidebar flex h-full shrink-0 flex-col overflow-hidden border-r border-outline-gray-1 bg-surface-gray-1 transition-[width] duration-300 ease-in-out"
+		:class="collapsed ? 'w-12' : 'w-64'"
 	>
-		<div class="flex items-center gap-2 px-3 py-3">
+		<div
+			class="flex h-12 shrink-0 items-center gap-2"
+			:class="collapsed ? 'justify-center px-2' : 'px-3'"
+		>
 			<BrandMark :size="20" />
-			<span class="text-sm font-semibold text-ink-gray-9">{{ __("Flow") }}</span>
+			<span v-if="!collapsed" class="text-sm font-semibold text-ink-gray-9">{{
+				__("Flow")
+			}}</span>
 		</div>
 
 		<!-- action links: New Chat / Search Chat -->
 		<nav class="flex flex-col gap-px px-2 pb-1.5">
 			<button
-				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
+				class="flex h-[30px] w-full items-center rounded text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
+				:class="collapsed ? 'justify-center px-1' : 'gap-2 px-2'"
 				:disabled="sending"
+				:title="collapsed ? __('New Chat') : undefined"
+				:aria-label="__('New Chat')"
 				@click="startNewChat"
 			>
 				<FeatherIcon name="plus" class="h-4 w-4 shrink-0" />
-				{{ __("New Chat") }}
+				<span v-if="!collapsed">{{ __("New Chat") }}</span>
 			</button>
 		</nav>
 
 		<!-- nav links: the doctypes a Flow user configures directly -->
 		<nav class="flex flex-col gap-px border-t border-outline-gray-1 px-2 py-1.5">
 			<button
-				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
-				:class="route.path === '/agents' ? 'bg-surface-selected shadow-sm' : ''"
+				class="flex h-[30px] w-full items-center rounded text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
+				:class="[
+					collapsed ? 'justify-center px-1' : 'gap-2 px-2',
+					route.path.startsWith('/agent') ? 'bg-surface-selected shadow-sm' : '',
+				]"
+				:title="collapsed ? __('Agent') : undefined"
+				:aria-label="__('Agent')"
 				@click="openAgents"
 			>
 				<FeatherIcon name="cpu" class="h-4 w-4 shrink-0" />
-				{{ __("Agent") }}
+				<span v-if="!collapsed">{{ __("Agent") }}</span>
 			</button>
 			<button
-				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
-				:class="route.path.startsWith('/macro') ? 'bg-surface-selected shadow-sm' : ''"
+				class="flex h-[30px] w-full items-center rounded text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
+				:class="[
+					collapsed ? 'justify-center px-1' : 'gap-2 px-2',
+					route.path.startsWith('/macro') ? 'bg-surface-selected shadow-sm' : '',
+				]"
+				:title="collapsed ? __('Macro') : undefined"
+				:aria-label="__('Macro')"
 				@click="openMacros"
 			>
 				<FeatherIcon name="layers" class="h-4 w-4 shrink-0" />
-				{{ __("Macro") }}
+				<span v-if="!collapsed">{{ __("Macro") }}</span>
 			</button>
 			<button
-				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
-				@click="openList('Flow Knowledge Base')"
-			>
-				<FeatherIcon name="book-open" class="h-4 w-4 shrink-0" />
-				{{ __("Knowledge Base") }}
-			</button>
+                class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
+                :class="route.path.startsWith('/knowledge-bases') ? 'bg-surface-selected shadow-sm' : ''"
+                @click="openKnowledgeBases"
+            >
+                <FeatherIcon name="book-open" class="h-4 w-4 shrink-0" />
+                {{ __("Knowledge Base") }}
+            </button>
 			<button
-				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
-				@click="openList('Flow Trigger')"
+				class="flex h-[30px] w-full items-center rounded text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
+				:class="[
+					collapsed ? 'justify-center px-1' : 'gap-2 px-2',
+					route.path.startsWith('/trigger') ? 'bg-surface-selected shadow-sm' : '',
+				]"
+				:title="collapsed ? __('Triggers') : undefined"
+				:aria-label="__('Triggers')"
+				@click="openTriggers"
 			>
 				<FeatherIcon name="zap" class="h-4 w-4 shrink-0" />
-				{{ __("Triggers") }}
+				<span v-if="!collapsed">{{ __("Triggers") }}</span>
 			</button>
 		</nav>
 
-		<SearchInput v-model="query" :placeholder="__('Search chats…')" />
+		<SearchInput v-if="!collapsed" v-model="query" :placeholder="__('Search chats…')" />
 
-		<div class="flow-scrollbar flex-1 overflow-y-auto p-1.5">
+		<div v-if="!collapsed" class="flow-scrollbar flex-1 overflow-y-auto p-1.5">
 			<p class="px-2 py-1.5 text-sm text-ink-gray-5">
 				{{ query.trim() ? __("Results") : __("Recent chats") }}
 			</p>
@@ -165,13 +219,36 @@ function timeAgo(ds) {
 				{{ query.trim() ? __("No matching chats") : __("No recent chats") }}
 			</div>
 		</div>
+		<div v-else class="flex-1"></div>
 
-		<div class="flex shrink-0 items-center justify-center border-t border-outline-gray-1 px-3 py-4">
-			<a href="https://greycube.in/" target="_blank" rel="noopener noreferrer">
+		<div class="shrink-0 p-2">
+			<button
+				type="button"
+				class="flex h-8 w-full items-center rounded-md text-ink-gray-7 hover:bg-surface-gray-2 hover:text-ink-gray-9"
+				:class="collapsed ? 'justify-center px-1' : 'gap-2 px-2'"
+				:title="collapsed ? __('Expand sidebar') : undefined"
+				:aria-label="collapsed ? __('Expand sidebar') : __('Collapse sidebar')"
+				:aria-expanded="!collapsed"
+				@click="toggleSidebar"
+			>
+				<FeatherIcon
+					name="chevrons-left"
+					class="h-4 w-4 shrink-0 transition-transform duration-300"
+					:class="collapsed ? 'rotate-180' : ''"
+				/>
+				<span v-if="!collapsed">{{ __("Collapse sidebar") }}</span>
+			</button>
+			<a
+				v-if="!collapsed"
+				class="mt-2 flex items-center justify-center border-t border-outline-gray-1 pt-2"
+				href="https://greycube.in/"
+				target="_blank"
+				rel="noopener noreferrer"
+			>
 				<img
 					:src="'/assets/flow/images/Greycube_Technologies.png'"
 					:alt="__('GreyCube Technologies')"
-					class="h-[3.8rem] w-auto"
+					class="h-12 w-auto"
 				/>
 			</a>
 		</div>
