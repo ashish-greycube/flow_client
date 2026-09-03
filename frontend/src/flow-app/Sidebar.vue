@@ -10,7 +10,7 @@ import { searchSessions } from "@/api/client";
 
 const router = useRouter();
 const route = useRoute();
-const { recentSessions, sessionName, sending, refreshHistory } = useStore();
+const { recentSessions, sessionName, sending, refreshHistory, newChat } = useStore();
 
 const SIDEBAR_STORAGE_KEY = "flow-sidebar-collapsed";
 const query = ref("");
@@ -46,12 +46,20 @@ watch(query, (q) => {
 // Server results while searching, otherwise the recent list the store keeps fresh.
 const list = computed(() => (query.value.trim() ? results.value : recentSessions.value));
 
-// Routing (not a direct switchSession/newChat call) so the URL reflects which
-// chat is open — ChatView's own route watcher does the actual store update in
-// response, the same "route drives data" pattern the Agent/Knowledge Base
-// pages use.
+// newChat() is called directly here, not left to ChatView's route watcher:
+// that watcher only fires on an actual *change* to route.params.session, so
+// if the sidebar is clicked from a different page entirely (Agents, Macro,
+// …) ChatView mounts fresh on the bare "/" route with nothing to react to —
+// its onMounted() falls through to the store's restoreSession(), which is a
+// one-time-ever no-op after the very first page load. Without this direct
+// call, the previously active session's messages (never cleared, since the
+// store is a module singleton that outlives ChatView's own mount/unmount)
+// would just sit there under the new URL — this is the exact "New Chat opens
+// the latest existing session" bug. The route push after it still matters:
+// it's what actually navigates here when ChatView isn't mounted yet.
 function startNewChat() {
 	if (sending.value) return;
+	newChat();
 	router.push({ name: "chat" });
 }
 
@@ -121,6 +129,20 @@ function readCollapsed() {
 				__("Flow")
 			}}</span>
 		</div>
+
+		<a
+			v-if="!collapsed"
+			class="flex items-center justify-center border-b border-outline-gray-1 px-3 pb-2"
+			href="https://greycube.in/"
+			target="_blank"
+			rel="noopener noreferrer"
+		>
+			<img
+				:src="'/assets/flow/images/Greycube_Technologies.png'"
+				:alt="__('GreyCube Technologies')"
+				class="h-12 w-auto"
+			/>
+		</a>
 
 		<!-- action links: New Chat / Search Chat -->
 		<nav class="flex flex-col gap-px px-2 pb-1.5">
@@ -241,19 +263,6 @@ function readCollapsed() {
 				/>
 				<span v-if="!collapsed">{{ __("Collapse sidebar") }}</span>
 			</button>
-			<a
-				v-if="!collapsed"
-				class="mt-2 flex items-center justify-center border-t border-outline-gray-1 pt-2"
-				href="https://greycube.in/"
-				target="_blank"
-				rel="noopener noreferrer"
-			>
-				<img
-					:src="'/assets/flow/images/Greycube_Technologies.png'"
-					:alt="__('GreyCube Technologies')"
-					class="h-12 w-auto"
-				/>
-			</a>
 		</div>
 	</aside>
 </template>

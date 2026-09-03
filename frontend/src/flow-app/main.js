@@ -1,6 +1,7 @@
 import { createApp } from "vue";
 import Shell from "./Shell.vue";
 import { router, attachFrappeRouteSync } from "./router";
+import { applyTheme, watchDesktopTheme } from "@/lib/theme";
 import "@/index.css";
 import "./theme.css";
 
@@ -17,15 +18,8 @@ function mount(elementId) {
 	if (!root) return;
 	root.id = "flow-root";
 
-	const apply = () => {
-		const theme = document.documentElement.getAttribute("data-theme") || "light";
-		root.setAttribute("data-theme", theme);
-	};
-	apply();
-	new MutationObserver(apply).observe(document.documentElement, {
-		attributes: true,
-		attributeFilter: ["data-theme"],
-	});
+	applyTheme();
+	watchDesktopTheme();
 
 	createApp(Shell).use(router).mount(root);
 	attachFrappeRouteSync();

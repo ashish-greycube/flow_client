@@ -2,6 +2,7 @@ import { createApp, watch } from "vue";
 import App from "@/App.vue";
 import { useStore } from "@/store";
 import { writePanelState } from "@/lib/panelState";
+import { applyTheme, watchDesktopTheme } from "@/lib/theme";
 import "@/index.css";
 
 // Floating chat widget injected into every desk page: a launcher button that
@@ -32,18 +33,12 @@ class FlowWidget {
 		this.vm = this.app.mount(this.root);
 	}
 
-	// Mirror the desk's light/dark theme onto the widget root so scoped tokens
-	// resolve to the right palette.
+	// Mirror the desk's light/dark theme onto the widget root, unless the user
+	// has set their own light/dark preference from the full chat page's
+	// sidebar (shared via localStorage — src/lib/theme.js).
 	_syncTheme() {
-		const apply = () => {
-			const theme = document.documentElement.getAttribute("data-theme") || "light";
-			this.root.setAttribute("data-theme", theme);
-		};
-		apply();
-		new MutationObserver(apply).observe(document.documentElement, {
-			attributes: true,
-			attributeFilter: ["data-theme"],
-		});
+		applyTheme();
+		watchDesktopTheme();
 	}
 
 	_registerShortcut() {

@@ -1,13 +1,13 @@
 /* Flow Chat page theme — a fixed brand palette layered over frappe-ui's default
-   tokens (not a light/dark pair; the same values apply whichever theme the
-   desk is in, since postcss-prefix-selector maps both `:root` and
-   `[data-theme="dark"]` onto this bundle's own #flow-root wrapper). Only the
-   tokens actually rendered on this page are touched — see the component
-   audit this was built from — so anything this page doesn't use keeps
-   frappe-ui's defaults untouched. */
+   tokens (postcss-prefix-selector maps `:root` onto this bundle's own
+   #flow-root wrapper, and `[data-theme="dark"]` onto that same element with
+   the attribute — src/lib/theme.js is what actually sets it, following the
+   desk's own theme by default or the user's own override from the sidebar
+   toggle). Only the tokens actually rendered on this page are touched — see
+   the component audit this was built from — so anything this page doesn't
+   use keeps frappe-ui's defaults untouched. */
 
-:root,
-[data-theme="dark"] {
+:root {
 	/* Surfaces: page/composer white, sidebar/hover/active a neutral grey scale
 	   (frappe-ui's own defaults — the same ones Jarvis's AppShell sidebar uses
 	   verbatim, `bg-surface-gray-1` etc.), so the sidebar reads as grey chrome
@@ -41,6 +41,37 @@
 	--outline-gray-4: #2e9bd6;
 }
 
+/* Dark mode — an actual distinct palette, not the light values re-applied.
+   Surfaces move to a near-black navy/charcoal scale; text moves to a light
+   grey/white scale; the brand accent blue (#2e9bd6) stays constant across
+   both themes and takes over the "solid surface" role (Send button, brand
+   mark) since the light theme's navy would have too little contrast against
+   a dark page. */
+[data-theme="dark"] {
+	--surface-white: #0f172a;
+	--surface-gray-1: #16202f;
+	--surface-gray-2: #1e293b;
+	--surface-gray-3: #263447;
+	--surface-gray-4: #334155;
+	--surface-gray-5: #2e9bd6;
+	--surface-gray-6: #2e9bd6;
+	--surface-gray-7: #2e9bd6;
+
+	--ink-white: #ffffff;
+	--ink-gray-9: #f1f5f9;
+	--ink-gray-8: #e2e8f0;
+	--ink-gray-7: #cbd5e1;
+	--ink-gray-6: #94a3b8;
+	--ink-gray-5: #94a3b8;
+	--ink-gray-4: #64748b;
+	--ink-gray-3: #64748b;
+
+	--outline-gray-1: #263447;
+	--outline-gray-2: #334155;
+	--outline-gray-3: #2e9bd6;
+	--outline-gray-4: #2e9bd6;
+}
+
 /* Sidebar text: Jarvis leaves its nav links, chat titles, and section labels
    on frappe-ui's own neutral grey/black ink scale — no brand tint — unlike
    the navy ink tokens the rest of this page uses. Redefining the ink-gray
@@ -56,6 +87,24 @@
 	--ink-gray-5: #7c7c7c;
 	--ink-gray-4: #999999;
 	--ink-gray-3: #c7c7c7;
+}
+
+/* Same neutral-grey intent as above, lightened for a dark sidebar surface. */
+[data-theme="dark"] .flow-sidebar {
+	--ink-gray-9: #f1f5f9;
+	--ink-gray-8: #e2e8f0;
+	--ink-gray-7: #cbd5e1;
+	--ink-gray-6: #cbd5e1;
+	--ink-gray-5: #94a3b8;
+	--ink-gray-4: #64748b;
+	--ink-gray-3: #475569;
+}
+
+/* The GreyCube logo is a dark mark on an opaque white card — invisible (worse,
+   a jarring white box) on a dark sidebar. Inverting flips it to a white mark
+   on black, which reads correctly against the dark surface. */
+[data-theme="dark"] .flow-sidebar img {
+	filter: invert(1);
 }
 
 /* One flat size/weight for every sidebar row, overriding the per-row Tailwind

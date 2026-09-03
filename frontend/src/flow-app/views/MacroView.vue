@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import PanelDropdown from "@/components/PanelDropdown.vue";
 import DocSection from "@/components/DocSection.vue";
+import MacroLogs from "../components/MacroLogs.vue";
 import {
 	Badge,
 	Breadcrumbs,
@@ -431,6 +432,8 @@ function showError(error, fallback) {
 							{{ __("Add another step") }}
 						</button>
 					</DocSection>
+
+					<MacroLogs v-if="!props.isNew" :macro="props.name" />
 				</div>
 			</fieldset>
 		</div>

@@ -24,6 +24,26 @@ export const loadMacro = (name) =>
 export const loadMacroRun = (name) =>
 	frappe.xcall("frappe.client.get", { doctype: "Flow Macro Run", name });
 
+export const loadMacroRuns = (macro) =>
+	getList("Flow Macro Run", {
+		filters: { macro },
+		fields: [
+			"name",
+			"status",
+			"trigger",
+			"session",
+			"agent",
+			"current_step",
+			"total_steps",
+			"started_at",
+			"finished_at",
+			"error",
+			"creation",
+		],
+		order_by: "creation desc",
+		limit_page_length: 20,
+	});
+
 export const loadMacroAgents = () =>
 	getList("Flow Agent", {
 		filters: { enabled: 1 },
