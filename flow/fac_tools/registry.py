@@ -6,6 +6,7 @@ from __future__ import annotations
 import frappe
 
 from flow.fac_tools.analysis import analyze_business_data, run_database_query, run_python_code
+from flow.fac_tools.charts import create_chart
 from flow.fac_tools.dashboards import create_dashboard, create_dashboard_chart, list_user_dashboards
 from flow.fac_tools.exports import export_excel
 from flow.fac_tools.files import extract_file_content
@@ -30,6 +31,7 @@ FAC_TOOLS: list[Tool] = [
 	create_dashboard,
 	create_dashboard_chart,
 	list_user_dashboards,
+	create_chart,
 ]
 
 

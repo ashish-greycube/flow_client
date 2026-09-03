@@ -21,3 +21,14 @@ export { default as Breadcrumbs } from "frappe-ui/src/components/Breadcrumbs/Bre
 // so content teleported to `document.body` (the default) would render
 // completely unstyled.
 export { default as Combobox } from "frappe-ui/src/components/Combobox/Combobox.vue";
+// NumberChart (a plain KPI number, no echarts dependency) for create_chart's
+// "number" kind. The axis/donut/funnel kinds instead go through ChartCard.vue
+// + LazyECharts.vue, using frappe-ui's *option-builder functions* directly
+// (axisChartOptions.ts etc., plain data transforms with no runtime echarts
+// import of their own) rather than its AxisChart/DonutChart/FunnelChart.vue
+// wrapper components — those wrappers' shared ECharts.vue statically imports
+// the `echarts` package itself, which isn't meaningfully tree-shakeable
+// (~350KB gzipped) and would otherwise sit in this bundle for every user
+// regardless of whether any conversation ever renders a chart (see
+// loadEcharts.js).
+export { default as NumberChart } from "frappe-ui/src/components/Charts/NumberChart.vue";

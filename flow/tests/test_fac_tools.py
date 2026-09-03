@@ -18,7 +18,7 @@ class TestFACToolDefinitions(UnitTestCase):
 	def test_names_are_unique(self):
 		names = [advanced_tool.name for advanced_tool in FAC_TOOLS]
 		self.assertEqual(len(names), len(set(names)))
-		self.assertEqual(len(names), 15)
+		self.assertEqual(len(names), 16)
 
 	def test_all_tools_have_closed_object_schemas(self):
 		for advanced_tool in FAC_TOOLS:

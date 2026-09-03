@@ -58,7 +58,7 @@ function newKnowledgeBase() {
 </script>
 
 <template>
-	<div class="relative flex min-w-0 flex-1 flex-col bg-surface-white text-ink-gray-9">
+	<div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-surface-white text-ink-gray-9">
 		<header class="flex items-center justify-between border-b border-outline-gray-1 px-6 py-4">
 			<h1 class="text-lg font-normal text-ink-gray-9">{{ __("Knowledge Base") }}</h1>
 			<Button variant="solid" @click="newKnowledgeBase">

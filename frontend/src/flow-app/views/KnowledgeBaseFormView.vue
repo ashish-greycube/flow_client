@@ -203,7 +203,7 @@ function newSource() {
 </script>
 
 <template>
-	<div class="relative flex min-w-0 flex-1 flex-col bg-surface-white text-ink-gray-9">
+	<div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-surface-white text-ink-gray-9">
 		<header class="flex items-center justify-between border-b border-outline-gray-1 px-6 py-4">
 			<Breadcrumbs class="form-breadcrumbs" :items="breadcrumbs" />
 			<div class="flex items-center gap-2">

@@ -41,6 +41,7 @@ const LABELS = {
 	update: "Updating Records",
 	delete: "Deleting Records",
 	run_action: "Running Document Actions",
+	create_chart: "Creating chart",
 };
 
 export function toolLabel(name) {
@@ -86,6 +87,24 @@ export function toolError(result) {
 		}
 	}
 	return null;
+}
+
+// create_chart's payload: {chart: {kind: "axis"|"donut"|"funnel"|"number", config}}.
+// A tool result matching this shape gets its own ChartCard instead of showing
+// as a generic activity step — see AssistantMessage.vue.
+const CHART_KINDS = new Set(["axis", "donut", "funnel", "number"]);
+export function chartPayload(result) {
+	if (typeof result !== "string" || !result) return null;
+	let parsed;
+	try {
+		parsed = JSON.parse(result);
+	} catch {
+		return null;
+	}
+	const chart = parsed && typeof parsed === "object" ? parsed.chart : null;
+	if (!chart || typeof chart !== "object") return null;
+	if (!CHART_KINDS.has(chart.kind) || !chart.config || typeof chart.config !== "object") return null;
+	return chart;
 }
 
 const isScalar = (v) => v === null || typeof v !== "object";

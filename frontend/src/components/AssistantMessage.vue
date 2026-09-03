@@ -3,9 +3,11 @@ import { ref, computed } from "vue";
 import MarkdownText from "./MarkdownText.vue";
 import ActivityGroup from "./ActivityGroup.vue";
 import ConfirmCard from "./ConfirmCard.vue";
+import ChartCard from "./ChartCard.vue";
 import FeedbackBar from "./FeedbackBar.vue";
 import WorkingIndicator from "./WorkingIndicator.vue";
 import { useStore } from "@/store";
+import { chartPayload } from "@/lib/toolMeta";
 
 const props = defineProps({ message: { type: Object, required: true } });
 const { answerQuestion, toolApproval } = useStore();
@@ -25,6 +27,14 @@ const items = computed(() => {
 	for (const part of props.message.parts) {
 		if (part.type !== "tool") {
 			out.push({ kind: "text", id: part.id, part });
+			continue;
+		}
+		// A create_chart result gets its own line (like a confirm/approval card)
+		// rather than folding into the activity group — the chart itself is the
+		// content the user wants to see, not something to expand out of the way.
+		const chart = chartPayload(part.result);
+		if (chart) {
+			out.push({ kind: "chart", id: part.id, chart });
 			continue;
 		}
 		if (isApproval(part)) {
@@ -68,6 +78,7 @@ const hovered = ref(false);
 				:tool="item.part"
 				@answer="(answer) => answerQuestion(message, item.question, answer)"
 			/>
+			<ChartCard v-else-if="item.kind === 'chart'" :chart="item.chart" />
 			<ActivityGroup
 				v-else
 				:parts="item.parts"
