@@ -24,6 +24,7 @@ def start_run(
 	session: str | None = None,
 	model: str | None = None,
 	attachments: list[str] | str | None = None,
+	routing: str | None = None,
 	stream: bool | str = False,
 ) -> dict[str, Any] | Response:
 	"""Start a new turn. Creates a session if none is given. `attachments` are uploaded File
@@ -31,13 +32,70 @@ def start_run(
 	if not isinstance(input, str) or not input.strip():
 		frappe.throw(_("Input is required."), title=_("Invalid Input"))
 
-	from flow.lib.session import load_session, new_session
-
 	stream = _is_truthy(stream)
 	files = _parse_attachments(attachments)
-	convo = load_session(session, agent=agent, model=model) if session else new_session(agent, model=model)
-	out = convo.chat(input, attachments=files, stream=stream)
+	routing = _parse_routing(routing)
+	from flow.routing.orchestrator import resolve_turn
+
+	convo, decision = resolve_turn(input.strip(), agent, session, model, routing)
+	out = convo.chat(
+		input,
+		attachments=files,
+		stream=stream,
+		routing_action=decision.action,
+		routing_confidence=decision.confidence,
+		routing_reason=decision.reason,
+	)
 	return _sse_response(out) if stream else _summarize(out)
+
+
+@frappe.whitelist()
+def get_chat(name: str) -> dict[str, Any]:
+	"""Return one visible chat, merging its agent-specific session segments."""
+	if not isinstance(name, str) or not name.strip():
+		frappe.throw(_("Conversation is required."), title=_("Invalid Conversation"))
+	from flow.routing.conversation import get_chat as load_chat
+
+	return load_chat(name.strip())
+
+
+@frappe.whitelist()
+def get_chat_history(query: str | None = None) -> list[dict[str, Any]]:
+	"""List parent conversations plus legacy sessions without exposing routed segments twice."""
+	if query is not None and not isinstance(query, str):
+		frappe.throw(_("Search query must be text."), title=_("Invalid Search Query"))
+	from flow.routing.conversation import chat_history
+
+	return chat_history((query or "").strip()[:200] or None)
+
+
+@frappe.whitelist()
+def get_chat_paused_run(name: str) -> list[dict[str, Any]]:
+	if not isinstance(name, str) or not name.strip():
+		frappe.throw(_("Conversation is required."), title=_("Invalid Conversation"))
+	from flow.routing.conversation import chat_sessions
+
+	return frappe.get_list(
+		"Flow Run",
+		filters={"session": ["in", chat_sessions(name.strip())], "status": "Paused"},
+		fields=["name", "questions"],
+		order_by="creation desc",
+		limit_page_length=1,
+	)
+
+
+@frappe.whitelist()
+def get_chat_feedback(name: str) -> list[dict[str, Any]]:
+	if not isinstance(name, str) or not name.strip():
+		frappe.throw(_("Conversation is required."), title=_("Invalid Conversation"))
+	from flow.routing.conversation import chat_sessions
+
+	return frappe.get_list(
+		"Flow Run",
+		filters={"session": ["in", chat_sessions(name.strip())], "feedback_rating": ["is", "set"]},
+		fields=["name", "feedback_rating", "feedback_comment"],
+		limit_page_length=500,
+	)
 
 
 @frappe.whitelist()
@@ -86,10 +144,9 @@ def recover_session(session: str) -> dict[str, int]:
 	if not isinstance(session, str) or not session.strip():
 		frappe.throw(_("Session is required."), title=_("Invalid Session"))
 
-	from flow.lib.session import _assert_session_owner
+	from flow.routing.conversation import resolve_chat
 
-	doc = frappe.get_doc("Flow Session", session.strip())
-	_assert_session_owner(doc)
+	_conversation, doc = resolve_chat(session.strip())
 
 	abandoned = frappe.get_all("Flow Run", filters={"session": doc.name, "status": "Running"}, pluck="name")
 	for name in abandoned:
@@ -305,7 +362,7 @@ def _event_to_dict(event: Event) -> dict[str, Any]:
 	if isinstance(event, ToolEnded):
 		return {"type": "tool_ended", "id": event.id, "name": event.name, "result": event.result}
 	if isinstance(event, RunStarted):
-		return {"type": "run_started", "name": event.name, "session": event.session}
+		return {"type": "run_started", **asdict(event)}
 	if isinstance(event, Error):
 		return {"type": "error", "message": event.message}
 	if isinstance(event, Done):
@@ -354,6 +411,14 @@ def _parse_attachments(value: Any) -> list[str]:
 	return files
 
 
+def _parse_routing(value: Any) -> str | None:
+	if value in (None, ""):
+		return None
+	if not isinstance(value, str) or value.strip().lower() not in {"auto", "manual"}:
+		frappe.throw(_("Routing must be Auto or Manual."), title=_("Invalid Routing Mode"))
+	return value.strip().lower()
+
+
 def _parse_answers(answers: Any) -> dict[str, Any]:
 	if isinstance(answers, str):
 		try:
@@ -366,9 +431,15 @@ def _parse_answers(answers: Any) -> dict[str, Any]:
 
 
 def _summarize(run: FlowRun) -> dict[str, Any]:
+	session = frappe.get_doc("Flow Session", run.session)
 	payload: dict[str, Any] = {
 		"name": run.name,
-		"session": run.session,
+		"session": session.conversation or run.session,
+		"agent_session": run.session,
+		"agent": session.agent,
+		"routing_action": run.routing_action,
+		"routing_confidence": run.routing_confidence,
+		"routing_reason": run.routing_reason,
 		"status": run.status,
 		"iterations": run.iterations,
 	}

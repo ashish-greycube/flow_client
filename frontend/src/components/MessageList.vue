@@ -62,7 +62,14 @@ watch(scrollTick, () => {
 						{{ __("Response interrupted") }}
 					</div>
 				</template>
-				<AssistantMessage v-else :message="msg" />
+				<div
+					v-if="msg.role === 'assistant' && msg.agentSwitch"
+					class="flex items-center gap-1.5 text-[length:var(--text-sm)] text-ink-gray-5"
+				>
+					<FeatherIcon name="shuffle" class="h-3.5 w-3.5 shrink-0" />
+					{{ __("Switched to {0}", [msg.agentSwitch]) }}
+				</div>
+				<AssistantMessage v-if="msg.role === 'assistant'" :message="msg" />
 			</template>
 		</div>
 	</div>

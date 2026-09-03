@@ -15,7 +15,17 @@ if TYPE_CHECKING:
 
 
 def new_session(
-	agent: Any = None, *, model: str | None = None, title: str | None = None, source: str = "Manual"
+	agent: Any = None,
+	*,
+	model: str | None = None,
+	title: str | None = None,
+	source: str = "Manual",
+	conversation: str | None = None,
+	previous_session: str | None = None,
+	routing_action: str | None = None,
+	routing_confidence: float | None = None,
+	routing_reason: str | None = None,
+	handoff_summary: str | None = None,
 ) -> FlowSession:
 	"""Start a conversation. `agent` may be a code `Agent`, a Flow Agent doc, an agent name,
 	or None for the default Assistant. Code agents leave the session's agent link empty.
@@ -25,9 +35,15 @@ def new_session(
 		{
 			"doctype": "Flow Session",
 			"agent": agent_name,
+			"conversation": conversation,
+			"previous_session": previous_session,
 			"model": session_model,
 			"title": title,
 			"source": source,
+			"routing_action": routing_action,
+			"routing_confidence": routing_confidence,
+			"routing_reason": routing_reason,
+			"handoff_summary": handoff_summary,
 		}
 	).insert(ignore_permissions=True)
 	doc._runtime = runtime

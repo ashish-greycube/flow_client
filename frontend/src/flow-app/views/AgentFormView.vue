@@ -67,6 +67,12 @@ const form = reactive({
 	max_iterations: null,
 	instructions: "",
 	enabled: true,
+	allow_auto_routing: false,
+	routing_domain: "",
+	routing_priority: 0,
+	routing_description: "",
+	routing_doctypes: "",
+	routing_examples: "",
 	tools: [], // [{ tool, permission }]
 	knowledge_bases: [], // [knowledge_base name, ...]
 });
@@ -128,6 +134,12 @@ const dirty = computed(() => {
 		(form.max_iterations || null) !== snap.max_iterations ||
 		(form.instructions || "") !== snap.instructions ||
 		(form.enabled ? 1 : 0) !== snap.enabled ||
+		(form.allow_auto_routing ? 1 : 0) !== snap.allowAutoRouting ||
+		(form.routing_domain || "") !== snap.routingDomain ||
+		Number(form.routing_priority || 0) !== snap.routingPriority ||
+		(form.routing_description || "") !== snap.routingDescription ||
+		(form.routing_doctypes || "") !== snap.routingDoctypes ||
+		(form.routing_examples || "") !== snap.routingExamples ||
 		toolsKey(form.tools) !== snap.toolsKey ||
 		JSON.stringify([...form.knowledge_bases].sort()) !== snap.knowledgeBasesJson
 	);
@@ -150,6 +162,12 @@ function snapshotForm() {
 		max_iterations: form.max_iterations || null,
 		instructions: form.instructions,
 		enabled: form.enabled ? 1 : 0,
+		allowAutoRouting: form.allow_auto_routing ? 1 : 0,
+		routingDomain: form.routing_domain,
+		routingPriority: Number(form.routing_priority || 0),
+		routingDescription: form.routing_description,
+		routingDoctypes: form.routing_doctypes,
+		routingExamples: form.routing_examples,
 		toolsKey: toolsKey(form.tools),
 		knowledgeBasesJson: JSON.stringify([...form.knowledge_bases].sort()),
 	};
@@ -171,6 +189,12 @@ async function load() {
 			form.max_iterations = doc.max_iterations || null;
 			form.instructions = doc.instructions || "";
 			form.enabled = !!doc.enabled;
+			form.allow_auto_routing = !!doc.allow_auto_routing;
+			form.routing_domain = doc.routing_domain || "";
+			form.routing_priority = Number(doc.routing_priority || 0);
+			form.routing_description = doc.routing_description || "";
+			form.routing_doctypes = routingDoctypesText(doc.routing_doctypes);
+			form.routing_examples = doc.routing_examples || "";
 			form.tools = (doc.tools || []).map((r) => ({ tool: r.tool, permission: r.permission || "" }));
 			form.knowledge_bases = (doc.knowledge_bases || []).map((r) => r.knowledge_base);
 			isSystemGenerated.value = !!doc.is_system_generated;
@@ -188,6 +212,12 @@ async function load() {
 		form.max_iterations = null;
 		form.instructions = "";
 		form.enabled = true;
+		form.allow_auto_routing = false;
+		form.routing_domain = "";
+		form.routing_priority = 0;
+		form.routing_description = "";
+		form.routing_doctypes = "";
+		form.routing_examples = "";
 		form.tools = [];
 		form.knowledge_bases = [];
 	}
@@ -206,6 +236,24 @@ function goBack() {
 	router.push({ name: "agents" });
 }
 
+function routingDoctypesText(value) {
+	if (!value) return "";
+	try {
+		const parsed = typeof value === "string" ? JSON.parse(value) : value;
+		return Array.isArray(parsed) ? parsed.join(", ") : "";
+	} catch {
+		return "";
+	}
+}
+
+function routingDoctypesJson() {
+	const names = form.routing_doctypes
+		.split(",")
+		.map((name) => name.trim())
+		.filter(Boolean);
+	return names.length ? JSON.stringify([...new Set(names)]) : null;
+}
+
 async function save() {
 	if (!canSave.value) return;
 	saving.value = true;
@@ -215,6 +263,12 @@ async function save() {
 			max_iterations: form.max_iterations || null,
 			instructions: form.instructions.trim(),
 			enabled: form.enabled ? 1 : 0,
+			allow_auto_routing: form.allow_auto_routing ? 1 : 0,
+			routing_domain: form.routing_domain.trim(),
+			routing_priority: Number(form.routing_priority || 0),
+			routing_description: form.routing_description.trim(),
+			routing_doctypes: routingDoctypesJson(),
+			routing_examples: form.routing_examples.trim(),
 			tools: form.tools
 				.filter((r) => r.tool)
 				.map((r) => ({ tool: r.tool, permission: r.permission || null })),
@@ -267,7 +321,7 @@ async function save() {
 </script>
 
 <template>
-	<div class="relative flex min-w-0 flex-1 flex-col bg-surface-white text-ink-gray-9">
+	<div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-surface-white text-ink-gray-9">
 		<header class="flex items-center justify-between border-b border-outline-gray-1 px-6 py-4">
 			<Breadcrumbs class="form-breadcrumbs" :items="breadcrumbs" />
 			<div class="flex items-center gap-2">
@@ -348,6 +402,63 @@ async function save() {
 								:label="__('Enabled')"
 								:description="__('Off = this agent is hidden from pickers and won\'t run.')"
 								:disabled="saving"
+							/>
+						</div>
+					</DocSection>
+
+					<DocSection :label="__('Automatic Routing')" :collapsible="false">
+						<div class="space-y-4">
+							<Switch
+								v-model="form.allow_auto_routing"
+								:label="__('Allow Auto Routing')"
+								:description="__('Let Flow select this agent for matching user requests.')"
+								:disabled="isSystemGenerated || saving"
+							/>
+
+							<div class="grid grid-cols-2 gap-4">
+								<TextInput
+									type="text"
+									:label="__('Routing Domain')"
+									:placeholder="__('e.g. Accounts Payable')"
+									:model-value="form.routing_domain"
+									:disabled="isSystemGenerated || saving"
+									@update:model-value="(v) => (form.routing_domain = v)"
+								/>
+								<TextInput
+									type="number"
+									:label="__('Routing Priority')"
+									:model-value="form.routing_priority"
+									:disabled="isSystemGenerated || saving"
+									@update:model-value="(v) => (form.routing_priority = Number(v || 0))"
+								/>
+							</div>
+
+							<Textarea
+								:rows="3"
+								:label="__('Routing Description')"
+								:placeholder="__('Describe which requests should be routed to this agent.')"
+								:model-value="form.routing_description"
+								:disabled="isSystemGenerated || saving"
+								@update:model-value="(v) => (form.routing_description = v)"
+							/>
+
+							<TextInput
+								type="text"
+								:label="__('Routing DocTypes')"
+								:placeholder="__('Purchase Invoice, Purchase Receipt')"
+								:model-value="form.routing_doctypes"
+								:description="__('Comma-separated DocType names this agent can handle.')"
+								:disabled="isSystemGenerated || saving"
+								@update:model-value="(v) => (form.routing_doctypes = v)"
+							/>
+
+							<Textarea
+								:rows="4"
+								:label="__('Routing Examples')"
+								:placeholder="__('Add one representative user request per line.')"
+								:model-value="form.routing_examples"
+								:disabled="isSystemGenerated || saving"
+								@update:model-value="(v) => (form.routing_examples = v)"
 							/>
 						</div>
 					</DocSection>

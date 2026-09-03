@@ -45,12 +45,18 @@ class FlowAgent(Document):
 		)
 		from flow.flow.doctype.flow_agent_tool.flow_agent_tool import FlowAgentTool
 
+		allow_auto_routing: DF.Check
 		enabled: DF.Check
 		instructions: DF.LongText
 		is_system_generated: DF.Check
 		knowledge_bases: DF.TableMultiSelect[FlowAgentKnowledgeBase]
 		max_iterations: DF.Int
 		model: DF.Link
+		routing_description: DF.SmallText | None
+		routing_doctypes: DF.JSON | None
+		routing_domain: DF.Data | None
+		routing_examples: DF.SmallText | None
+		routing_priority: DF.Int
 		title: DF.Data
 		tools: DF.Table[FlowAgentTool]
 	# end: auto-generated types
@@ -69,12 +75,22 @@ class FlowAgent(Document):
 
 	def validate(self):
 		self._validate_max_iterations()
+		self._validate_routing_metadata()
 		self._ensure_knowledge_search_tool()
 		validate_immutable(self)
 
 	def _validate_max_iterations(self):
 		if self.max_iterations is not None and self.max_iterations < 1:
 			frappe.throw(_("Max Iterations must be at least 1."), title=_("Invalid Max Iterations"))
+
+	def _validate_routing_metadata(self):
+		if self.routing_priority is not None and self.routing_priority < 0:
+			frappe.throw(_("Routing Priority cannot be negative."), title=_("Invalid Routing Priority"))
+		if self.allow_auto_routing and not self.routing_description:
+			frappe.throw(
+				_("Routing Description is required when automatic routing is enabled."),
+				title=_("Missing Routing Description"),
+			)
 
 	def _ensure_knowledge_search_tool(self):
 		"""A bound knowledge base is inert without the search tool. Keep them consistent

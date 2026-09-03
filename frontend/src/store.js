@@ -24,6 +24,7 @@ const toolApprovalCache = {};
 
 const selectedAgent = ref(null);
 const selectedModel = ref(null);
+const routingMode = ref("auto");
 const sessionName = ref(null);
 const runName = ref(null);
 
@@ -49,6 +50,7 @@ const paused = computed(() => {
 });
 
 function agentLabel(name) {
+	if (!name) return __("Auto");
 	return agents.value.find((a) => a.name === name)?.title || name;
 }
 function modelLabel(name) {
@@ -62,9 +64,8 @@ async function loadInitial() {
 		const [a, m] = await Promise.all([api.loadAgents(), api.loadModels(), refreshHistory()]);
 		agents.value = a;
 		models.value = m;
-		const assistant = a.find((x) => x.name === "Flow");
-		selectedAgent.value = assistant ? assistant.name : (a[0]?.name ?? null);
-		loadToolApproval(selectedAgent.value);
+		selectedAgent.value = null;
+		toolApproval.value = {};
 		loaded.value = true;
 		focusTick.value++;
 	} catch {
@@ -130,6 +131,7 @@ function loadToolApproval(agent) {
 function setAgent(name) {
 	if (locked.value) return;
 	selectedAgent.value = name;
+	routingMode.value = name ? "manual" : "auto";
 	loadToolApproval(name);
 }
 function setModel(name) {
@@ -141,6 +143,9 @@ function newChat() {
 	if (sending.value) return;
 	sessionName.value = null;
 	runName.value = null;
+	selectedAgent.value = null;
+	routingMode.value = "auto";
+	toolApproval.value = {};
 	messages.value = [];
 	attachments.value = [];
 	focusTick.value++;
@@ -201,6 +206,7 @@ async function switchSession(name) {
 	if (seq !== switchSeq) return;
 	selectedAgent.value = doc.agent;
 	selectedModel.value = doc.model || null;
+	routingMode.value = (doc.routing_mode || "Manual").toLowerCase();
 	await loadToolApproval(doc.agent);
 	if (seq !== switchSeq) return;
 
@@ -214,9 +220,13 @@ async function switchSession(name) {
 	// Merge consecutive assistant rows (one per iteration in the doc) into one
 	// message, as live does — otherwise the tool grouping fragments per iteration.
 	let current = null;
+	let previousAgent = null;
+	let pendingAgentSwitch = null;
 	for (const m of doc.messages || []) {
 		if (m.role === "user") {
 			current = null;
+			if (previousAgent && m.agent && m.agent !== previousAgent) pendingAgentSwitch = m.agent;
+			if (m.agent) previousAgent = m.agent;
 			messages.value.push({
 				id: nextId(),
 				role: "user",
@@ -224,7 +234,11 @@ async function switchSession(name) {
 				attachments: attachmentsByRun[m.run] || [],
 			});
 		} else if (m.role === "assistant") {
-			if (!current) current = pushAssistant(false);
+			if (!current) {
+				current = pushAssistant(false);
+				current.agentSwitch = pendingAgentSwitch;
+				pendingAgentSwitch = null;
+			}
 			if (m.run) current.runName = m.run;
 			if (m.content) current.parts.push(makeTextPart(m.content));
 			for (const t of parseToolCalls(m.tool_calls)) {
@@ -298,7 +312,10 @@ async function send(text) {
 				input: text,
 				...(files.length && { attachments: files }),
 				...(sessionName.value && { session: sessionName.value }),
-				...(selectedAgent.value && !sessionName.value && { agent: selectedAgent.value }),
+				routing: routingMode.value,
+				...(routingMode.value === "manual" && selectedAgent.value && !sessionName.value && {
+					agent: selectedAgent.value,
+				}),
 				...(selectedModel.value && { model: selectedModel.value }),
 			},
 			(event) => handleEvent(event, assistant),
@@ -393,6 +410,11 @@ function handleEvent(event, msg) {
 			runName.value = event.name;
 			sessionName.value = event.session;
 			msg.runName = event.name;
+			msg.agentSwitch = ["Switch", "Fallback"].includes(event.routing_action)
+				? event.agent
+				: null;
+			selectedAgent.value = event.agent;
+			loadToolApproval(event.agent);
 			break;
 		case "text":
 			appendText(msg, event.delta);
@@ -474,6 +496,7 @@ function pushAssistant(pending = true) {
 		questions: [],
 		runName: null,
 		feedback: null,
+		agentSwitch: null,
 	};
 	messages.value.push(msg);
 	// Return the reactive proxy, not the raw object — streaming mutates this after
@@ -527,6 +550,7 @@ export function useStore() {
 		recentSessions,
 		selectedAgent,
 		selectedModel,
+		routingMode,
 		sessionName,
 		messages,
 		attachments,

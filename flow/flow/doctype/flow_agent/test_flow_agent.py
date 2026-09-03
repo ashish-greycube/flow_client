@@ -72,6 +72,11 @@ class TestFlowAgentDefaults(IntegrationTestCase):
 		with self.assertRaises(frappe.LinkValidationError):
 			doc.insert()
 
+	def test_auto_routing_requires_description(self):
+		doc = frappe.get_doc(_agent(self.model_doc.name, allow_auto_routing=1))
+		with self.assertRaisesRegex(frappe.ValidationError, "Routing Description"):
+			doc.insert()
+
 
 class TestFlowAgentAssemble(IntegrationTestCase):
 	def setUp(self):

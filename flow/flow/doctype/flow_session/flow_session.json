@@ -6,9 +6,15 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
+  "conversation",
+  "previous_session",
   "agent",
   "model",
   "source",
+  "routing_action",
+  "routing_confidence",
+  "routing_reason",
+  "handoff_summary",
   "section_break_transcript",
   "transcript_html",
   "messages",
@@ -22,6 +28,24 @@
    "in_list_view": 1,
    "label": "Title",
    "length": 200
+  },
+  {
+   "description": "Parent chat that groups agent-specific session segments.",
+   "fieldname": "conversation",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Conversation",
+   "options": "Flow Conversation",
+   "read_only": 1
+  },
+  {
+   "description": "Previous agent-specific segment when automatic routing switched agents.",
+   "fieldname": "previous_session",
+   "fieldtype": "Link",
+   "label": "Previous Session",
+   "options": "Flow Session",
+   "read_only": 1
   },
   {
    "description": "Saved Flow Agent driving this conversation. Empty for sessions driven by a code-defined agent.",
@@ -48,6 +72,36 @@
    "in_standard_filter": 1,
    "label": "Source",
    "options": "Manual\nTrigger",
+   "read_only": 1
+  },
+  {
+   "description": "Routing decision that created this agent-specific session segment.",
+   "fieldname": "routing_action",
+   "fieldtype": "Select",
+   "label": "Routing Action",
+   "options": "\nManual\nInitial\nSwitch\nFallback",
+   "read_only": 1
+  },
+  {
+   "description": "Router confidence from 0 to 1.",
+   "fieldname": "routing_confidence",
+   "fieldtype": "Float",
+   "label": "Routing Confidence",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "description": "Short explanation of why this agent was selected.",
+   "fieldname": "routing_reason",
+   "fieldtype": "Small Text",
+   "label": "Routing Reason",
+   "read_only": 1
+  },
+  {
+   "description": "Bounded context transferred from the preceding agent-specific session.",
+   "fieldname": "handoff_summary",
+   "fieldtype": "Small Text",
+   "label": "Handoff Summary",
    "read_only": 1
   },
   {

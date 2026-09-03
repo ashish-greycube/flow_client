@@ -49,7 +49,10 @@ const inputDisabled = computed(
 	() => !loaded.value || sending.value || paused.value || needsSetup.value
 );
 
-const agentItems = computed(() => agents.value.map((a) => ({ value: a.name, label: a.title })));
+const agentItems = computed(() => [
+	{ value: null, label: __("Auto") },
+	...agents.value.map((a) => ({ value: a.name, label: a.title })),
+]);
 const modelItems = computed(() => [
 	{ value: null, label: __("Default") },
 	...models.value.map((m) => ({ value: m.name, label: m.title })),

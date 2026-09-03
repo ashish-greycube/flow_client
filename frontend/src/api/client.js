@@ -159,47 +159,16 @@ export const loadReferenceDoctypes = () =>
 		limit_page_length: 5000,
 	});
 
-export const loadHistory = () =>
-	getList("Flow Session", {
-		filters: { owner: frappe.session.user, source: ["!=", "Trigger"] },
-		fields: ["name", "title", "modified"],
-		order_by: "modified desc",
-		limit_page_length: 15,
-	});
+export const loadHistory = () => frappe.xcall("flow.api.get_chat_history");
 
-// Escape LIKE wildcards so a literal % or _ matches itself, not "anything".
-const escapeLike = (s) => s.replace(/[\\%_]/g, "\\$&");
+export const searchSessions = (query) => frappe.xcall("flow.api.get_chat_history", { query });
 
-export const searchSessions = (query) =>
-	getList("Flow Session", {
-		filters: {
-			owner: frappe.session.user,
-			source: ["!=", "Trigger"],
-			title: ["like", `%${escapeLike(query)}%`],
-		},
-		fields: ["name", "title", "modified"],
-		order_by: "modified desc",
-		limit_page_length: 20,
-	});
+export const getSession = (name) => frappe.xcall("flow.api.get_chat", { name });
 
-export const getSession = (name) =>
-	frappe.xcall("frappe.client.get", { doctype: "Flow Session", name });
-
-export const getPausedRun = (session) =>
-	getList("Flow Run", {
-		filters: { session, status: "Paused" },
-		fields: ["name", "questions"],
-		order_by: "creation desc",
-		limit_page_length: 1,
-	});
+export const getPausedRun = (name) => frappe.xcall("flow.api.get_chat_paused_run", { name });
 
 // Feedback the user already gave on this session's runs, to restore thumbs state on reload.
-export const getRunFeedback = (session) =>
-	getList("Flow Run", {
-		filters: { session, feedback_rating: ["is", "set"] },
-		fields: ["name", "feedback_rating", "feedback_comment"],
-		limit_page_length: 100,
-	});
+export const getRunFeedback = (name) => frappe.xcall("flow.api.get_chat_feedback", { name });
 
 // Record thumbs feedback on a run; optionally store a Down comment as agent memory.
 export const submitFeedback = (args) => frappe.xcall("flow.api.submit_feedback", args);

@@ -53,8 +53,14 @@ class FlowSession(Document):
 
 		agent: DF.Link | None
 		attachments: DF.Table[FlowSessionAttachment]
+		conversation: DF.Link | None
+		handoff_summary: DF.SmallText | None
 		messages: DF.Table[FlowSessionMessage]
 		model: DF.Link | None
+		previous_session: DF.Link | None
+		routing_action: DF.Literal["", "Manual", "Initial", "Switch", "Fallback"]
+		routing_confidence: DF.Float
+		routing_reason: DF.SmallText | None
 		source: DF.Literal["Manual", "Trigger"]
 		title: DF.Data | None
 	# end: auto-generated types
@@ -65,6 +71,7 @@ class FlowSession(Document):
 
 	def on_trash(self):
 		frappe.db.delete("Flow Run", {"session": self.name})
+		_delete_attachment_files([self.name])
 		_purge_attachment_chunks(self.name)
 
 	def _validate_model_enabled(self):
@@ -92,7 +99,11 @@ class FlowSession(Document):
 		"""Delete sessions idle for `days`, along with their Flow Runs and transcript rows.
 		Age is last activity (modified), so an actively-used session is never purged."""
 		cutoff = frappe.utils.add_days(frappe.utils.now(), -days)
-		sessions = frappe.get_all("Flow Session", filters={"modified": ["<", cutoff]}, pluck="name")
+		sessions = frappe.get_all(
+			"Flow Session",
+			filters={"modified": ["<", cutoff], "conversation": ["is", "not set"]},
+			pluck="name",
+		)
 		for batch in frappe.utils.create_batch(sessions, 100):
 			frappe.db.delete("Flow Run", {"session": ["in", batch]})
 			frappe.db.delete("Flow Session Message", {"parent": ["in", batch]})
@@ -137,6 +148,9 @@ class FlowSession(Document):
 		reference_name: str | None = None,
 		auto_approve: bool = False,
 		stream: bool = False,
+		routing_action: str | None = None,
+		routing_confidence: float | None = None,
+		routing_reason: str | None = None,
 	) -> FlowRun | Generator[Event]:
 		"""Run one turn and persist it as a Flow Run. `attachments` are File names whose text
 		is injected into this turn's prompt. With `stream=True`, returns an event generator.
@@ -160,6 +174,9 @@ class FlowSession(Document):
 			reference_doctype=reference_doctype,
 			reference_name=reference_name,
 			config_snapshot=self._snapshot,
+			routing_action=routing_action,
+			routing_confidence=routing_confidence,
+			routing_reason=routing_reason,
 		)
 		self._persist_turn(input, attachment_data, run.name)
 		self._index_retrieval_attachments(run.name, {d["file"]: d["extracted_text"] for d in attachment_data})
@@ -211,7 +228,10 @@ class FlowSession(Document):
 		attachment rows before the run executes. Stored ahead of the run so they fall in the
 		transcript prefix the run's own message-append skips — the run persists only its output."""
 		if not self.messages and self._runtime.instructions:
-			self.append("messages", {"role": "system", "content": self._runtime.instructions, "run": run})
+			instructions = self._runtime.instructions
+			if self.handoff_summary:
+				instructions += f"\n\nCONVERSATION HANDOFF\n{self.handoff_summary}"
+			self.append("messages", {"role": "system", "content": instructions, "run": run})
 		self.append("messages", {"role": "user", "content": input, "run": run})
 
 		threshold = self._attachment_inline_threshold()

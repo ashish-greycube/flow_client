@@ -55,9 +55,16 @@ has_permission = {
 # the referenced doc. A knowledge chunk indexes a doc; a Flow Run records the doc a
 # trigger acted on. The incremental sweep removes orphaned chunks afterwards.
 # A session's Flow Model reference is historical bookkeeping and must not block deletion.
-ignore_links_on_delete = ["Flow Knowledge Chunk", "Flow Macro Run", "Flow Run", "Flow Session"]
+ignore_links_on_delete = [
+	"Flow Knowledge Chunk",
+	"Flow Macro Run",
+	"Flow Run",
+	"Flow Session",
+	"Flow Conversation",
+]
 
 default_log_clearing_doctypes = {
+	"Flow Conversation": 90,
 	"Flow Session": 90,
 }
 

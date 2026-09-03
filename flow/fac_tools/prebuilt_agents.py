@@ -46,8 +46,12 @@ def _sync_agent(specification: dict[str, Any], model_name: str) -> None:
 	title = specification["title"]
 	compatible = _is_compatible(specification)
 	values = {
+		"allow_auto_routing": 1,
 		"instructions": _instructions(specification),
 		"max_iterations": 25 if specification["nature"].lower() == "operator" else 20,
+		"routing_description": specification["description"],
+		"routing_doctypes": json.dumps(specification["doctypes_required"]),
+		"routing_domain": specification["domain"],
 		"tools": [{"tool": name} for name in _tool_names(specification)],
 		"enabled": int(specification["status"] == "Published" and compatible),
 		"is_system_generated": 1,
@@ -62,6 +66,10 @@ def _sync_agent(specification: dict[str, Any], model_name: str) -> None:
 		return
 	doc.instructions = values["instructions"]
 	doc.max_iterations = values["max_iterations"]
+	doc.allow_auto_routing = values["allow_auto_routing"]
+	doc.routing_description = values["routing_description"]
+	doc.routing_doctypes = values["routing_doctypes"]
+	doc.routing_domain = values["routing_domain"]
 	doc.enabled = values["enabled"]
 	doc.set("tools", values["tools"])
 	doc.save(ignore_permissions=True)

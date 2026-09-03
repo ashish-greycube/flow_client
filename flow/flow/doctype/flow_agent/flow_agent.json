@@ -12,6 +12,14 @@
   "column_break_meta",
   "model",
   "max_iterations",
+  "section_break_routing",
+  "allow_auto_routing",
+  "routing_domain",
+  "column_break_routing",
+  "routing_priority",
+  "routing_description",
+  "routing_doctypes",
+  "routing_examples",
   "section_break_instructions",
   "instructions",
   "section_break_tools",
@@ -64,6 +72,53 @@
    "fieldtype": "Int",
    "label": "Max Iterations",
    "non_negative": 1
+  },
+  {
+   "fieldname": "section_break_routing",
+   "fieldtype": "Section Break",
+   "label": "Automatic Routing"
+  },
+  {
+   "default": "0",
+   "description": "Allow Flow to select this agent automatically for matching requests.",
+   "fieldname": "allow_auto_routing",
+   "fieldtype": "Check",
+   "label": "Allow Auto Routing"
+  },
+  {
+   "description": "Short business domain used to shortlist this agent, for example Accounts Payable or Support.",
+   "fieldname": "routing_domain",
+   "fieldtype": "Data",
+   "label": "Routing Domain"
+  },
+  {
+   "fieldname": "column_break_routing",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Tie-break priority. Higher values win only when candidates are otherwise equally suitable.",
+   "fieldname": "routing_priority",
+   "fieldtype": "Int",
+   "label": "Routing Priority"
+  },
+  {
+   "description": "Describe the requests this agent should receive. Keep operational instructions in Instructions.",
+   "fieldname": "routing_description",
+   "fieldtype": "Small Text",
+   "label": "Routing Description"
+  },
+  {
+   "description": "JSON array of DocType names this agent is designed to work with.",
+   "fieldname": "routing_doctypes",
+   "fieldtype": "JSON",
+   "label": "Routing DocTypes"
+  },
+  {
+   "description": "One representative user request per line.",
+   "fieldname": "routing_examples",
+   "fieldtype": "Small Text",
+   "label": "Routing Examples"
   },
   {
    "fieldname": "section_break_instructions",

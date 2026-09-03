@@ -1,0 +1,72 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-09-03 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "routing_mode"
+ ],
+ "fields": [
+  {
+   "description": "Short label derived from the first user message.",
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "length": 200
+  },
+  {
+   "default": "Auto",
+   "description": "Whether each new turn may be routed to the most suitable enabled agent.",
+   "fieldname": "routing_mode",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Routing Mode",
+   "options": "Auto\nManual",
+   "read_only": 1,
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [
+  {
+   "group": "Sessions",
+   "link_doctype": "Flow Session",
+   "link_fieldname": "conversation"
+  }
+ ],
+ "modified": "2026-09-03 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Flow",
+ "name": "Flow Conversation",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "if_owner": 1,
+   "read": 1,
+   "role": "All",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 0
+}

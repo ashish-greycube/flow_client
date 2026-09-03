@@ -24,6 +24,11 @@ class RunStarted:
 
 	name: str
 	session: str
+	agent: str | None = None
+	agent_session: str | None = None
+	routing_action: str | None = None
+	routing_confidence: float | None = None
+	routing_reason: str | None = None
 
 
 @dataclass
@@ -52,6 +57,9 @@ class FlowRun(Document):
 		questions: DF.JSON | None
 		reference_doctype: DF.Link | None
 		reference_name: DF.DynamicLink | None
+		routing_action: DF.Literal["", "Manual", "Initial", "Continue", "Switch", "Fallback"]
+		routing_confidence: DF.Float
+		routing_reason: DF.SmallText | None
 		session: DF.Link
 		source: DF.Literal["Manual", "Trigger"]
 		status: DF.Literal["Running", "Paused", "Completed", "Failed"]
@@ -125,6 +133,9 @@ def create_run(
 	reference_doctype: str | None = None,
 	reference_name: str | None = None,
 	config_snapshot: dict[str, Any] | None = None,
+	routing_action: str | None = None,
+	routing_confidence: float | None = None,
+	routing_reason: str | None = None,
 ) -> FlowRun:
 	"""Create a new Flow Run row in the Running state. `session` is required — every run
 	belongs to a Flow Session (which carries the transcript and agent linkage)."""
@@ -137,6 +148,9 @@ def create_run(
 			"reference_doctype": reference_doctype,
 			"reference_name": reference_name,
 			"session": session,
+			"routing_action": routing_action,
+			"routing_confidence": routing_confidence,
+			"routing_reason": routing_reason,
 			"config_snapshot": _dump_json(config_snapshot) if config_snapshot else None,
 			"status": "Running",
 		}
@@ -182,7 +196,16 @@ def stream_with_persistence(
 	"""
 	from flow.lib.agent import Done
 
-	yield RunStarted(name=run.name, session=run.session)
+	session = frappe.get_doc("Flow Session", run.session)
+	yield RunStarted(
+		name=run.name,
+		session=session.conversation or run.session,
+		agent=session.agent,
+		agent_session=run.session,
+		routing_action=run.routing_action,
+		routing_confidence=run.routing_confidence,
+		routing_reason=run.routing_reason,
+	)
 
 	final_result: RunResult | None = None
 	persisted = False
