@@ -10,7 +10,7 @@ import { searchSessions } from "@/api/client";
 
 const router = useRouter();
 const route = useRoute();
-const { recentSessions, sessionName, sending, refreshHistory, newChat } = useStore();
+const { recentSessions, sending, refreshHistory, newChat } = useStore();
 
 const SIDEBAR_STORAGE_KEY = "flow-sidebar-collapsed";
 const query = ref("");
@@ -45,6 +45,9 @@ watch(query, (q) => {
 
 // Server results while searching, otherwise the recent list the store keeps fresh.
 const list = computed(() => (query.value.trim() ? results.value : recentSessions.value));
+const activeSession = computed(() =>
+	route.name === "chat-session" ? route.params.session : null,
+);
 
 // newChat() is called directly here, not left to ChatView's route watcher:
 // that watcher only fires on an actual *change* to route.params.session, so
@@ -83,6 +86,16 @@ function openKnowledgeBases() {
 function openTriggers() {
 	router.push("/triggers");
 }
+
+// Hide a nav link entirely when the user has no read access to its doctype,
+// e.g. Flow Trigger / Flow Knowledge Base are System Manager-only.
+function canRead(doctype) {
+	return (frappe.boot.user?.can_read || []).includes(doctype);
+}
+const canReadAgent = canRead("Flow Agent");
+const canReadMacro = canRead("Flow Macro");
+const canReadTrigger = canRead("Flow Trigger");
+const canReadKnowledgeBase = canRead("Flow Knowledge Base");
 
 function toggleSidebar() {
 	collapsed.value = !collapsed.value;
@@ -162,6 +175,7 @@ function readCollapsed() {
 		<!-- nav links: the doctypes a Flow user configures directly -->
 		<nav class="flex flex-col gap-px border-t border-outline-gray-1 px-2 py-1.5">
 			<button
+				v-if="canReadAgent"
 				class="flex h-[30px] w-full items-center rounded text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
 				:class="[
 					collapsed ? 'justify-center px-1' : 'gap-2 px-2',
@@ -175,6 +189,7 @@ function readCollapsed() {
 				<span v-if="!collapsed">{{ __("Agent") }}</span>
 			</button>
 			<button
+				v-if="canReadMacro"
 				class="flex h-[30px] w-full items-center rounded text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
 				:class="[
 					collapsed ? 'justify-center px-1' : 'gap-2 px-2',
@@ -188,6 +203,7 @@ function readCollapsed() {
 				<span v-if="!collapsed">{{ __("Macro") }}</span>
 			</button>
 			<button
+				v-if="canReadTrigger"
 				class="flex h-[30px] w-full items-center rounded text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
 				:class="[
 					collapsed ? 'justify-center px-1' : 'gap-2 px-2',
@@ -201,6 +217,7 @@ function readCollapsed() {
 				<span v-if="!collapsed">{{ __("Triggers") }}</span>
 			</button>
 			<button
+				v-if="canReadKnowledgeBase"
 				class="flex h-[30px] w-full items-center rounded text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
 				:class="[
 					collapsed ? 'justify-center px-1' : 'gap-2 px-2',
@@ -228,7 +245,7 @@ function readCollapsed() {
 				v-for="s in list"
 				:key="s.name"
 				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left hover:bg-surface-gray-2"
-				:class="s.name === sessionName ? 'bg-surface-selected shadow-sm' : ''"
+				:class="s.name === activeSession ? 'bg-surface-selected shadow-sm' : ''"
 				@click="choose(s.name)"
 			>
 				<span class="flex-1 truncate text-sm text-ink-gray-8">{{

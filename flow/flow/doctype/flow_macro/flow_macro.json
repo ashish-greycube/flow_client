@@ -33,7 +33,7 @@
  "name": "Flow Macro",
  "permissions": [
   {"create":1,"delete":1,"if_owner":1,"print":1,"read":1,"report":1,"role":"All","write":1},
-  {"read":1,"report":1,"role":"System Manager"}
+  {"read":1,"report":1,"role":"System Manager","write":1}
  ],
  "sort_field": "modified",
  "sort_order": "DESC",

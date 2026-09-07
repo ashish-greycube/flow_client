@@ -237,7 +237,9 @@ def _assign_owner(doctype: str, name: str, owner: str) -> None:
 
 
 def _assert_owner(doc) -> None:
-	if doc.owner == frappe.session.user or frappe.session.user == "Administrator":
+	from flow.macros.permissions import is_system_manager
+
+	if doc.owner == frappe.session.user or is_system_manager(frappe.session.user):
 		return
 	frappe.throw(_("You can only run or control your own macros."), frappe.PermissionError)
 

@@ -11,17 +11,17 @@ def macro_run_query_conditions(user: str | None = None) -> str:
 	return _owner_query("Flow Macro Run", user)
 
 
-def has_macro_permission(doc, ptype: str = "read", user: str | None = None) -> bool | None:
+def has_macro_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 	user = user or frappe.session.user
-	if _is_system_manager(user) or ptype == "create":
-		return None
+	if is_system_manager(user) or ptype == "create":
+		return True
 	return doc.owner == user
 
 
-def has_macro_run_permission(doc, ptype: str = "read", user: str | None = None) -> bool | None:
+def has_macro_run_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 	user = user or frappe.session.user
-	if _is_system_manager(user):
-		return None
+	if is_system_manager(user):
+		return True
 	if ptype == "create":
 		return False
 	return doc.owner == user
@@ -29,10 +29,10 @@ def has_macro_run_permission(doc, ptype: str = "read", user: str | None = None) 
 
 def _owner_query(doctype: str, user: str | None) -> str:
 	user = user or frappe.session.user
-	if _is_system_manager(user):
+	if is_system_manager(user):
 		return ""
 	return f"`tab{doctype}`.`owner` = {frappe.db.escape(user)}"
 
 
-def _is_system_manager(user: str) -> bool:
+def is_system_manager(user: str) -> bool:
 	return user == "Administrator" or "System Manager" in frappe.get_roles(user)

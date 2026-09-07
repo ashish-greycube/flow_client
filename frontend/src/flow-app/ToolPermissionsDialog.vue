@@ -25,6 +25,19 @@ const PERMISSION_ITEMS = PERMISSIONS.map((p) => ({ value: p.value, label: p.labe
 const loading = ref(false);
 const rows = ref([]); // [{ tool, title, requires_confirmation, permission }]
 
+// Flow Agent grants read to every user but write only to System Manager
+// (flow_agent.json) — setAgentToolPermissions saves onto the agent itself
+// (shared by everyone who uses it), so it throws a PermissionError for
+// anyone else. frappe.boot.user.can_write is the same doctype-level check
+// the backend makes, already sent with every session, so the dialog can
+// grey the controls out up front instead of letting a click round-trip into
+// a silent/confusing failure.
+const canEdit = computed(
+	() =>
+		frappe.session.user === "Administrator" ||
+		(frappe.boot.user?.can_write || []).includes("Flow Agent")
+);
+
 // The tool's own default (Flow Tool.requires_confirmation) draws the line between
 // the two groups — matches how the resolver treats a row with no override.
 const readOnly = computed(() => rows.value.filter((r) => !r.requires_confirmation));
@@ -58,7 +71,7 @@ function close() {
 // Optimistic: the row updates immediately, the request runs behind it. A failure
 // rolls the row back so the dialog never drifts from what's actually saved.
 async function setOne(row, value) {
-	if (effective(row) === value) return;
+	if (!canEdit.value || effective(row) === value) return;
 	const previous = row.permission;
 	row.permission = value;
 	try {
@@ -70,7 +83,7 @@ async function setOne(row, value) {
 }
 
 async function setGroup(targets, value) {
-	if (!targets.length) return;
+	if (!canEdit.value || !targets.length) return;
 	const previous = targets.map((r) => r.permission);
 	targets.forEach((r) => (r.permission = value));
 	try {
@@ -110,6 +123,9 @@ function groupLabel(list) {
 					<div v-if="agentLabel" class="text-xs text-ink-gray-5">
 						{{ __("Tools available to {0}", [agentLabel]) }}
 					</div>
+					<div v-if="!loading && !canEdit" class="mt-1 text-xs text-ink-red-4">
+						{{ __("Only a System Manager can change tool permissions.") }}
+					</div>
 				</div>
 				<button
 					class="flex h-6 w-6 items-center justify-center rounded text-ink-gray-5 hover:bg-surface-gray-2"
@@ -127,7 +143,11 @@ function groupLabel(list) {
 				{{ __("This agent has no tools configured.") }}
 			</div>
 
-			<div v-else class="flow-scrollbar flex flex-col gap-5 overflow-y-auto px-4 py-4">
+			<fieldset
+				v-else
+				:disabled="!canEdit"
+				class="flow-scrollbar flex flex-col gap-5 overflow-y-auto px-4 py-4 disabled:opacity-60"
+			>
 				<section v-if="readOnly.length">
 					<div class="mb-1.5 flex items-center justify-between">
 						<div class="flex items-center gap-2">
@@ -233,7 +253,7 @@ function groupLabel(list) {
 						</div>
 					</div>
 				</section>
-			</div>
+			</fieldset>
 
 			<footer class="flex justify-end border-t border-outline-gray-1 px-4 py-3">
 				<Button variant="solid" @click="close">{{ __("Done") }}</Button>
