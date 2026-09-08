@@ -6,12 +6,15 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime
 
+from flow.auth import require_flow_user
+
 MACRO = "Flow Macro"
 MACRO_RUN = "Flow Macro Run"
 
 
 @frappe.whitelist()
 def run_macro(macro: str) -> dict[str, str]:
+	require_flow_user()
 	doc = frappe.get_doc(MACRO, macro)
 	_assert_owner(doc)
 	if not doc.enabled:
@@ -63,6 +66,7 @@ def execute_macro(macro_run: str) -> None:
 
 @frappe.whitelist()
 def resume_macro_run(macro_run: str, answers: dict | str) -> dict[str, str]:
+	require_flow_user()
 	run = frappe.get_doc(MACRO_RUN, macro_run)
 	_assert_owner(run)
 	if run.status != "Paused" or not run.session or not run.flow_run:
@@ -93,6 +97,7 @@ def resume_macro_run(macro_run: str, answers: dict | str) -> dict[str, str]:
 
 @frappe.whitelist()
 def stop_macro_run(macro_run: str) -> dict[str, str]:
+	require_flow_user()
 	run = frappe.get_doc(MACRO_RUN, macro_run)
 	_assert_owner(run)
 	if run.status not in ("Completed", "Failed", "Stopped"):

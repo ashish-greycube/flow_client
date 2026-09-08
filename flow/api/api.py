@@ -12,6 +12,8 @@ import frappe
 from frappe import _
 from werkzeug.wrappers import Response
 
+from flow.auth import require_flow_user
+
 if TYPE_CHECKING:
 	from flow.flow.doctype.flow_run.flow_run import FlowRun
 	from flow.lib.agent import Event
@@ -29,6 +31,7 @@ def start_run(
 ) -> dict[str, Any] | Response:
 	"""Start a new turn. Creates a session if none is given. `attachments` are uploaded File
 	names whose text is injected into this turn. With `stream=True`, returns SSE."""
+	require_flow_user()
 	if not isinstance(input, str) or not input.strip():
 		frappe.throw(_("Input is required."), title=_("Invalid Input"))
 
@@ -52,6 +55,7 @@ def start_run(
 @frappe.whitelist()
 def get_chat(name: str) -> dict[str, Any]:
 	"""Return one visible chat, merging its agent-specific session segments."""
+	require_flow_user()
 	if not isinstance(name, str) or not name.strip():
 		frappe.throw(_("Conversation is required."), title=_("Invalid Conversation"))
 	from flow.routing.conversation import get_chat as load_chat
@@ -62,6 +66,7 @@ def get_chat(name: str) -> dict[str, Any]:
 @frappe.whitelist()
 def get_chat_history(query: str | None = None) -> list[dict[str, Any]]:
 	"""List parent conversations plus legacy sessions without exposing routed segments twice."""
+	require_flow_user()
 	if query is not None and not isinstance(query, str):
 		frappe.throw(_("Search query must be text."), title=_("Invalid Search Query"))
 	from flow.routing.conversation import chat_history
@@ -71,6 +76,7 @@ def get_chat_history(query: str | None = None) -> list[dict[str, Any]]:
 
 @frappe.whitelist()
 def get_chat_paused_run(name: str) -> list[dict[str, Any]]:
+	require_flow_user()
 	if not isinstance(name, str) or not name.strip():
 		frappe.throw(_("Conversation is required."), title=_("Invalid Conversation"))
 	from flow.routing.conversation import chat_sessions
@@ -86,6 +92,7 @@ def get_chat_paused_run(name: str) -> list[dict[str, Any]]:
 
 @frappe.whitelist()
 def get_chat_feedback(name: str) -> list[dict[str, Any]]:
+	require_flow_user()
 	if not isinstance(name, str) or not name.strip():
 		frappe.throw(_("Conversation is required."), title=_("Invalid Conversation"))
 	from flow.routing.conversation import chat_sessions
@@ -103,6 +110,7 @@ def resume_run(
 	run_name: str, answers: dict[str, Any] | str, stream: bool | str = False
 ) -> dict[str, Any] | Response:
 	"""Resume a Paused run. `answers` maps each question.key to the user's answer. With `stream=True`, returns SSE."""
+	require_flow_user()
 	from flow.lib.session import assert_run_owner, load_session
 
 	parsed_answers = _parse_answers(answers)
@@ -124,6 +132,7 @@ def resume_run(
 def stop_run(run_name: str) -> dict[str, str]:
 	"""Stop a run at the user's request: terminate a Paused run so the agent won't continue,
 	or finalize a Running one whose SSE stream the client has aborted."""
+	require_flow_user()
 	from flow.lib.session import assert_run_owner
 
 	if not isinstance(run_name, str) or not run_name.strip():
@@ -141,6 +150,7 @@ def recover_session(session: str) -> dict[str, int]:
 	"""Fail any Running run on session (re)load. The client that owned the stream is
 	gone, so the run is abandoned; clearing it here unblocks the next turn instead of
 	waiting for the stale-run timeout on the next send."""
+	require_flow_user()
 	if not isinstance(session, str) or not session.strip():
 		frappe.throw(_("Session is required."), title=_("Invalid Session"))
 
@@ -166,6 +176,7 @@ def submit_feedback(run_name: str, rating: str, comment: str | None = None) -> d
 	"""Record thumbs feedback on a finished run, or clear it with rating "None". A
 	thumbs-down comment is stored as shared agent memory when the agent has memory
 	enabled (a no-op otherwise). Clearing the rating leaves any saved memory intact."""
+	require_flow_user()
 	from flow.lib.session import assert_run_owner
 	from flow.memory.memory import save_feedback_memory
 
@@ -205,6 +216,7 @@ def submit_feedback(run_name: str, rating: str, comment: str | None = None) -> d
 def get_agent_tools(agent: str) -> dict[str, bool]:
 	"""Map an agent's tool slugs to whether each needs confirmation, so the panel can
 	classify tool calls (approval vs. inline)"""
+	require_flow_user()
 	if not isinstance(agent, str) or not agent.strip():
 		return {}
 
@@ -226,6 +238,7 @@ def get_agent_tool_permissions(agent: str) -> list[dict[str, Any]]:
 	dialog. `permission` is the explicit per-agent override if one is set, else null —
 	the caller falls back to `requires_confirmation` (Needs Approval if checked, else
 	Always Allow), same as the resolver does when actually running the agent."""
+	require_flow_user()
 	if not isinstance(agent, str) or not agent.strip():
 		return []
 
@@ -264,6 +277,7 @@ def set_agent_tool_permissions(agent: str, permissions: dict[str, str] | str) ->
 	"""Bulk-set per-agent tool permission overrides. `permissions` maps tool slug to
 	"Always Allow" / "Needs Approval" / "Blocked", or "" to clear the override back
 	to the tool's own default."""
+	require_flow_user()
 	if isinstance(permissions, str):
 		permissions = frappe.parse_json(permissions)
 
@@ -291,6 +305,7 @@ def create_macro_from_prompts(
 ) -> dict[str, str]:
 	"""Create a Flow Macro from the chat's "Save as macro" action: `steps` is the
 	ordered list of user prompts from the conversation, as [{label, prompt}, ...]."""
+	require_flow_user()
 	if isinstance(steps, str):
 		steps = frappe.parse_json(steps)
 	if not isinstance(macro_name, str) or not macro_name.strip():
@@ -324,6 +339,7 @@ def attach_file(file: str) -> dict[str, Any]:
 	"""Validate and extract an uploaded File for use as a chat attachment. Errors
 	(unsupported type, unreadable, not owned) surface here, at upload time. The
 	extracted text is staged in cache; the attachment row is written on send."""
+	require_flow_user()
 	if not isinstance(file, str) or not file.strip():
 		frappe.throw(_("File is required."), title=_("Invalid Attachment"))
 

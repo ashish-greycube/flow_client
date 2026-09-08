@@ -7,7 +7,14 @@
  "name": "flow-chat",
  "owner": "Administrator",
  "page_name": "flow-chat",
- "roles": [],
+ "roles": [
+  {
+   "role": "Flow User"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
  "script": null,
  "standard": "Yes",
  "style": null,

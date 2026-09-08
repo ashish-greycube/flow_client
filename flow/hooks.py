@@ -87,3 +87,6 @@ after_migrate = [
 ]
 
 extend_bootinfo = "flow.boot.boot_session"
+
+
+after_install = "flow.install.after_install"

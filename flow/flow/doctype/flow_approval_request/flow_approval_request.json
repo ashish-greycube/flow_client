@@ -178,7 +178,7 @@
    "write": 1
   },
   {
-   "role": "All",
+   "role": "Flow User",
    "if_owner": 1,
    "read": 1,
    "write": 1,

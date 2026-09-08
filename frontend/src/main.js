@@ -93,5 +93,9 @@ class FlowWidget {
 
 frappe.provide("frappe.flow");
 $(document).on("app_ready", () => {
+	// Set by flow.boot.boot_session from the user's roles — the widget calls
+	// APIs that are restricted server-side regardless, this just keeps the
+	// launcher from appearing for users who couldn't use it anyway.
+	if (!frappe.boot.flow_user) return;
 	frappe.flow.widget = new FlowWidget();
 });

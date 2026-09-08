@@ -5,6 +5,7 @@ frappe.pages["flow-chat"].on_page_load = function (wrapper) {
 		parent: wrapper,
 		title: __("Flow Chat"),
 		single_column: true,
+		hide_sidebar: true,
 	});
 
 	const $parent = $(wrapper).find(".layout-main-section");

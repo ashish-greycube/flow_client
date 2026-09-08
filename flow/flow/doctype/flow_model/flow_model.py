@@ -195,6 +195,9 @@ CODEX_MODELS = ["gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.3-codex", "gpt-5.5"]
 
 @frappe.whitelist()
 def get_provider_models(provider: str | None = None) -> list[str]:
+	from flow.auth import require_flow_user
+
+	require_flow_user()
 	if not provider:
 		return []
 

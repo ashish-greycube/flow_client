@@ -105,7 +105,8 @@
   },
   {
    "read": 1,
-   "role": "All"
+   "role": "Flow User",
+   "select": 1
   }
  ],
  "row_format": "Dynamic",

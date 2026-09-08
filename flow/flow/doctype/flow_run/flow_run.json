@@ -126,7 +126,7 @@
   {
    "fieldname": "section_break_io",
    "fieldtype": "Section Break",
-   "label": "Input → Output"
+   "label": "Input \u2192 Output"
   },
   {
    "description": "Original user input that started the run.",
@@ -241,7 +241,7 @@
   {
    "if_owner": 1,
    "read": 1,
-   "role": "All"
+   "role": "Flow User"
   }
  ],
  "row_format": "Dynamic",
