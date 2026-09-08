@@ -82,6 +82,7 @@ scheduler_events = {
 
 after_migrate = [
 	"flow.assistant.sync_builtin_assistant",
+	"flow.assistant.sync_ocr_agent",
 	"flow.fac_tools.sync_fac_tools",
 ]
 

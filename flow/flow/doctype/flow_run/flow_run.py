@@ -100,9 +100,13 @@ class FlowRun(Document):
 		Resume re-invokes this on the same run: tool_calls already carries the full set (the
 		agent seeds it from the transcript), while iterations and usage accumulate here.
 		"""
+		from flow.lib.doc_links import collect_document_references, linkify_document_mentions
+
 		self.status = _status_from_result(result)
 		self.iterations = (self.iterations or 0) + result.iterations
-		self.output = result.output
+		references = collect_document_references(result.messages)
+		output = linkify_document_mentions(result.output, references)
+		self.output = output
 		self.tool_calls = _dump_json(
 			[{"id": c.id, "name": c.name, "arguments": c.arguments} for c in result.tool_calls]
 		)
@@ -114,6 +118,11 @@ class FlowRun(Document):
 
 		new_messages = _new_messages_for_session(self.session, result.messages)
 		if new_messages:
+			if output != result.output:
+				for message in reversed(new_messages):
+					if message.get("role") == "assistant" and not message.get("tool_calls"):
+						message["content"] = output
+						break
 			session = frappe.get_doc("Flow Session", self.session)
 			session.append_run_messages(new_messages, run=self.name)
 

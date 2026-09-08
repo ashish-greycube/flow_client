@@ -20,6 +20,16 @@ if TYPE_CHECKING:
 DEFAULT_TOOL_SLUGS = ("describe", "read", "execute")
 DEFAULT_MAX_ITERATIONS = 20
 
+DOCUMENT_LINK_INSTRUCTIONS = (
+	"DOCUMENT LINKS: whenever you mention a specific document by name in your reply — one you "
+	"just created, retrieved, updated, or are referencing for any other reason — format it as a "
+	"Markdown link so the user can open it directly: [<name>](/desk/<doctype-slug>/<name>), "
+	'where <doctype-slug> is the DocType name lowercased with spaces replaced by hyphens (e.g. '
+	'"Sales Order" -> sales-order, "Purchase Invoice" -> purchase-invoice). Do this for every '
+	"mention, not just the first, and keep the visible link text exactly the document's own "
+	"name/ID so it stays readable."
+)
+
 
 def _confirmation_override(permission: str | None) -> bool | None:
 	"""Map a Flow Agent Tool row's permission override to a `requires_confirmation`
@@ -125,10 +135,16 @@ class FlowAgent(Document):
 		return Agent(
 			model=Model(model_name),
 			name=self.name,
-			instructions=self.instructions,
+			instructions=self._instructions_with_document_links(),
 			tools=self._resolve_tools(),
 			max_iterations=self.max_iterations or DEFAULT_MAX_ITERATIONS,
 		)
+
+	def _instructions_with_document_links(self) -> str:
+		instructions = (self.instructions or "").rstrip()
+		if not instructions:
+			return DOCUMENT_LINK_INSTRUCTIONS
+		return f"{instructions}\n\n{DOCUMENT_LINK_INSTRUCTIONS}"
 
 	def _resolve_tools(self) -> list[Tool]:
 		from flow.memory.memory import MEMORY_TOOL_SLUG

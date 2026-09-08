@@ -15,7 +15,7 @@ from frappe import _
 
 TEXT_EXTENSIONS = {"txt", "text", "md", "markdown", "csv", "tsv", "log", "rst", "json", "yaml", "yml"}
 IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "bmp", "tiff", "tif", "gif"}
-FILE_EXTENSIONS = {"pdf", "xlsx", "docx", "html", "htm"} | TEXT_EXTENSIONS | IMAGE_EXTENSIONS
+FILE_EXTENSIONS = {"pdf", "xlsx", "docx", "doc", "html", "htm"} | TEXT_EXTENSIONS | IMAGE_EXTENSIONS
 
 OCR_DPI = 200
 
@@ -131,6 +131,8 @@ def _extract_by_extension(content, extension: str) -> str:
 		return _extract_xlsx(_as_bytes(content))
 	if extension == "docx":
 		return _extract_docx(_as_bytes(content))
+	if extension == "doc":
+		return _extract_doc(_as_bytes(content))
 	if extension in ("html", "htm"):
 		return _extract_html(_as_text(content))
 	if extension in IMAGE_EXTENSIONS:
@@ -258,6 +260,38 @@ def _extract_docx(data: bytes) -> str:
 	document = Document(BytesIO(data))
 	paragraphs = [p.text.strip() for p in document.paragraphs]
 	return "\n\n".join(p for p in paragraphs if p)
+
+
+def _extract_doc(data: bytes) -> str:
+	"""Legacy binary .doc has no maintained pure-Python parser (unlike .docx's OOXML).
+	Pull the WordDocument stream out of the OLE2 container and keep runs of printable
+	characters — a best-effort scrape, not a full reader. The stream also holds any
+	embedded objects (images, OLE packages) byte-for-byte, and their binary happens to
+	contain plenty of printable-looking runs, so _looks_like_prose filters those out
+	rather than feeding the model garbage."""
+	import olefile
+
+	if not olefile.isOleFile(data):
+		frappe.throw(_("File is not a valid .doc document."), title=_("Cannot Read Document"))
+
+	with olefile.OleFileIO(BytesIO(data)) as ole:
+		if not ole.exists("WordDocument"):
+			frappe.throw(_("File is not a valid .doc document."), title=_("Cannot Read Document"))
+		stream = ole.openstream("WordDocument").read()
+
+	runs = re.findall(rb"[\x09\x0a\x0d\x20-\x7e]{4,}", stream)
+	prose = [r.decode("ascii", errors="ignore") for r in runs]
+	prose = [r for r in prose if _looks_like_prose(r)]
+	return re.sub(r"\n{3,}", "\n\n", "\n".join(prose)).strip()
+
+
+def _looks_like_prose(run: str) -> bool:
+	"""True for a run that reads like natural-language text rather than binary noise
+	that happened to fall in the printable ASCII range."""
+	if len(run) < 8 or run.count(" ") < 2:
+		return False
+	wordlike = sum(c.isalpha() or c == " " for c in run)
+	return wordlike / len(run) > 0.75
 
 
 def _extract_html(markup: str) -> str:

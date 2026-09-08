@@ -7,6 +7,7 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from flow.flow.doctype.flow_agent.flow_agent import DOCUMENT_LINK_INSTRUCTIONS
 from flow.lib.agent import Agent
 from flow.lib.model import ChatResponse, Model
 from flow.tools.builtins import sync_builtin_tools
@@ -92,7 +93,7 @@ class TestFlowAgentAssemble(IntegrationTestCase):
 
 		self.assertIsInstance(runtime, Agent)
 		self.assertEqual(runtime.name, self.agent_doc.name)
-		self.assertEqual(runtime.instructions, "Be terse.")
+		self.assertEqual(runtime.instructions, f"Be terse.\n\n{DOCUMENT_LINK_INSTRUCTIONS}")
 		self.assertEqual(sorted(t.name for t in runtime.tools), ["describe", "execute", "read"])
 		self.assertEqual(runtime.max_iterations, 5)
 
