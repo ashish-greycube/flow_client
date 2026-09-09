@@ -71,7 +71,7 @@ defineExpose({ show, hide, toggle });
 
 		<button
 			class="flow-widget-launcher flex items-center justify-center rounded-full bg-surface-gray-7 text-ink-white shadow-2xl"
-			:title="visible ? __('Close chat') : __('Chat with Flow')"
+			:title="visible ? __('Close chat') : __('Chat with Flow.ai')"
 			@click="toggle"
 		>
 			<FeatherIcon :name="visible ? 'x' : 'message-circle'" class="h-6 w-6" />

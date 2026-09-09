@@ -26,6 +26,8 @@ def resolve_turn(
 	session: str | None,
 	model: str | None,
 	routing: str | None,
+	*,
+	file_only: bool = False,
 ) -> tuple[FlowSession, RoutingDecision]:
 	"""Resolve one API turn to an immutable agent-specific session."""
 	if not routing:
@@ -46,7 +48,7 @@ def resolve_turn(
 		return _manual_turn(agent, model, conversation, current)
 
 	context = conversation_context(conversation.name, current) if current else []
-	decision = _routing_decision(input, agent, model, current, context)
+	decision = _routing_decision(input, agent, model, current, context, file_only=file_only)
 	if current and decision.agent == current.agent:
 		convo = load_session(current.name, model=model)
 	else:
@@ -81,7 +83,7 @@ def _manual_turn(agent, model, conversation, current) -> tuple[FlowSession, Rout
 	return convo, decision
 
 
-def _routing_decision(input, agent, model, current, context) -> RoutingDecision:
+def _routing_decision(input, agent, model, current, context, *, file_only=False) -> RoutingDecision:
 	if agent:
 		return RoutingDecision(
 			"Continue" if current and current.agent == agent else ("Switch" if current else "Initial"),
@@ -91,6 +93,7 @@ def _routing_decision(input, agent, model, current, context) -> RoutingDecision:
 		)
 	return select_agent(
 		input,
+		file_only=file_only,
 		current_agent=current.agent if current else None,
 		context=context,
 		model=model,

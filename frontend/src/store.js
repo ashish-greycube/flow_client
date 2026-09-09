@@ -186,6 +186,14 @@ function removeAttachment(uid) {
 	attachments.value = attachments.value.filter((a) => a.uid !== uid);
 }
 
+// Deletes a Recent Chats entry. If it's the open chat, clears the panel back to
+// New Chat so the view doesn't keep showing a conversation that no longer exists.
+async function deleteChat(name) {
+	await api.deleteChat(name);
+	recentSessions.value = recentSessions.value.filter((s) => s.name !== name);
+	if (sessionName.value === name) newChat();
+}
+
 // Bumped per switch so a slow load can't write into a newer session's view.
 let switchSeq = 0;
 
@@ -293,9 +301,10 @@ let abortController = null;
 
 async function send(text) {
 	text = text.trim();
-	if (!text || sending.value || paused.value || uploading.value) return;
+	if (sending.value || paused.value || uploading.value) return;
 
 	const ready = attachments.value.filter((a) => a.status === "ready");
+	if (!text && !ready.length) return;
 	const files = ready.map((a) => a.file);
 	const chips = ready.map((a) => ({ file_name: a.file_name, file_size: a.file_size }));
 	attachments.value = [];
@@ -575,6 +584,7 @@ export function useStore() {
 		setModel,
 		newChat,
 		switchSession,
+		deleteChat,
 		send,
 		stopRun,
 		answerQuestion,

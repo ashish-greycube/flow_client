@@ -1,9 +1,22 @@
 app_name = "flow"
-app_title = "Flow"
+app_title = "Flow.ai"
 app_publisher = "Shrihari Mahabal"
 app_description = "Frappe Flow — native AI agents, tools, and triggers for Frappe"
 app_email = "shriharimahabal08@gmail.com"
 app_license = "agpl-3.0"
+app_logo_url = "/assets/flow/images/flow-logo.svg"
+app_home = "/desk/flow"
+
+# Shown on the desk app-switcher screen (frappe.get_hooks("add_to_apps_screen")).
+add_to_apps_screen = [
+	{
+		"name": app_name,
+		"logo": app_logo_url,
+		"title": app_title,
+		"route": app_home,
+		"has_permission": "flow.auth.is_flow_user",
+	}
+]
 
 export_python_type_annotations = True
 
@@ -84,6 +97,9 @@ after_migrate = [
 	"flow.assistant.sync_builtin_assistant",
 	"flow.assistant.sync_ocr_agent",
 	"flow.fac_tools.sync_fac_tools",
+	# Skills rollout is deferred; do not create or update skill records yet.
+	# "flow.skills.prebuilt.sync_prebuilt_skills",
+	"flow.install.after_install"
 ]
 
 extend_bootinfo = "flow.boot.boot_session"

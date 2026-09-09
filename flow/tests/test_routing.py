@@ -26,6 +26,24 @@ def _final(text: str = "done") -> ChatResponse:
 
 
 class TestAgentSelector(IntegrationTestCase):
+	def test_file_only_routes_to_available_ocr_without_model(self):
+		with (
+			patch("flow.routing.selector._routing_candidates", return_value=[{"name": "OCR Agent"}]),
+			patch.object(Model, "chat") as chat,
+		):
+			decision = select_agent("", current_agent="Flow", file_only=True)
+		self.assertEqual(decision.agent, "OCR Agent")
+		self.assertEqual(decision.action, "Switch")
+		chat.assert_not_called()
+
+	def test_file_only_does_not_select_unavailable_ocr(self):
+		fallback = RoutingDecision("Fallback", "Flow", 0, "Unavailable")
+		with (
+			patch("flow.routing.selector._routing_candidates", return_value=[]),
+			patch("flow.routing.selector._fallback", return_value=fallback),
+		):
+			self.assertEqual(select_agent("", file_only=True), fallback)
+
 	def test_explicit_doctype_match_uses_deterministic_route(self):
 		candidates = [
 			{

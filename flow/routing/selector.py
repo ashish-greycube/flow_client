@@ -33,11 +33,21 @@ def select_agent(
 	current_agent: str | None = None,
 	context: list[dict[str, str]] | None = None,
 	model: str | None = None,
+	file_only: bool = False,
 ) -> RoutingDecision:
 	"""Select an enabled, permitted specialist; use Flow when confidence is low."""
 	candidates = _routing_candidates()
 	if not candidates:
 		return _fallback(current_agent, "No auto-routable specialist is available.")
+
+	if file_only:
+		from flow.assistant.ocr_agent import OCR_AGENT_TITLE
+
+		if any(candidate["name"] == OCR_AGENT_TITLE for candidate in candidates):
+			return RoutingDecision(
+				_action(OCR_AGENT_TITLE, current_agent), OCR_AGENT_TITLE, 1.0,
+				"The user attached files without instructions; route to the OCR Agent.",
+			)
 
 	deterministic = _deterministic_choice(input, candidates, current_agent)
 	if deterministic:

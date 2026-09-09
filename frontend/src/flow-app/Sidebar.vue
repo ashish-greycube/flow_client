@@ -10,7 +10,7 @@ import { searchSessions } from "@/api/client";
 
 const router = useRouter();
 const route = useRoute();
-const { recentSessions, sending, refreshHistory, newChat } = useStore();
+const { recentSessions, sending, refreshHistory, newChat, deleteChat } = useStore();
 
 const SIDEBAR_STORAGE_KEY = "flow-sidebar-collapsed";
 const query = ref("");
@@ -69,6 +69,20 @@ function startNewChat() {
 function choose(name) {
 	if (sending.value) return;
 	router.push({ name: "chat-session", params: { session: name } });
+}
+
+// Deleting the open chat leaves the store on New Chat (handled in deleteChat
+// itself); the route still needs to follow it back to the bare "/" chat page.
+function removeChat(session, event) {
+	event.stopPropagation();
+	if (sending.value) return;
+	frappe.confirm(
+		__('Delete "{0}"? This cannot be undone.', [session.title || session.name]),
+		async () => {
+			await deleteChat(session.name);
+			if (session.name === activeSession.value) router.push({ name: "chat" });
+		},
+	);
 }
 
 function openAgents() {
@@ -137,13 +151,13 @@ function readCollapsed() {
 			class="flex h-12 shrink-0 items-center gap-2"
 			:class="collapsed ? 'justify-center px-2' : 'px-3'"
 		>
-			<BrandMark :size="20" />
-			<span v-if="!collapsed" class="text-sm font-semibold text-ink-gray-9">{{
-				__("Flow")
+			<BrandMark :size="40" />
+			<span v-if="!collapsed" class="flow-sidebar-title text-[20px] font-bold text-ink-gray-9">{{
+				__("Flow.ai")
 			}}</span>
 		</div>
 
-		<a
+		<!-- <a
 			v-if="!collapsed"
 			class="flex items-center justify-center border-b border-outline-gray-1 px-3 pb-2"
 			href="https://greycube.in/"
@@ -155,7 +169,7 @@ function readCollapsed() {
 				:alt="__('GreyCube Technologies')"
 				class="h-12 w-auto"
 			/>
-		</a>
+		</a> -->
 
 		<!-- action links: New Chat / Search Chat -->
 		<nav class="flex flex-col gap-px px-2 pb-1.5">
@@ -244,14 +258,25 @@ function readCollapsed() {
 			<button
 				v-for="s in list"
 				:key="s.name"
-				class="flex h-[30px] w-full items-center gap-2 rounded px-2 text-left hover:bg-surface-gray-2"
+				class="group flex h-[30px] w-full items-center gap-2 rounded px-2 text-left hover:bg-surface-gray-2"
 				:class="s.name === activeSession ? 'bg-surface-selected shadow-sm' : ''"
 				@click="choose(s.name)"
 			>
 				<span class="flex-1 truncate text-sm text-ink-gray-8">{{
 					s.title || s.name
 				}}</span>
-				<span class="shrink-0 text-[11px] text-ink-gray-5">{{ timeAgo(s.modified) }}</span>
+				<span class="shrink-0 text-[11px] text-ink-gray-5 group-hover:hidden">{{
+					timeAgo(s.modified)
+				}}</span>
+				<span
+					role="button"
+					:title="__('Delete chat')"
+					:aria-label="__('Delete chat')"
+					class="hidden h-5 w-5 shrink-0 items-center justify-center rounded text-ink-gray-5 hover:bg-surface-gray-3 hover:text-ink-red-4 group-hover:flex"
+					@click="removeChat(s, $event)"
+				>
+					<FeatherIcon name="trash-2" class="h-3.5 w-3.5" />
+				</span>
 			</button>
 
 			<div v-if="searching" class="px-2 py-4 text-center text-xs text-ink-gray-5">

@@ -21,10 +21,11 @@ if TYPE_CHECKING:
 
 @frappe.whitelist()
 def start_run(
-	input: str,
+	input: str = "",
 	agent: str | None = None,
 	session: str | None = None,
 	model: str | None = None,
+	skill: str | None = None,
 	attachments: list[str] | str | None = None,
 	routing: str | None = None,
 	stream: bool | str = False,
@@ -32,15 +33,21 @@ def start_run(
 	"""Start a new turn. Creates a session if none is given. `attachments` are uploaded File
 	names whose text is injected into this turn. With `stream=True`, returns SSE."""
 	require_flow_user()
-	if not isinstance(input, str) or not input.strip():
+	files = _parse_attachments(attachments)
+	if not isinstance(input, str) or (not input.strip() and not files):
 		frappe.throw(_("Input is required."), title=_("Invalid Input"))
 
 	stream = _is_truthy(stream)
-	files = _parse_attachments(attachments)
 	routing = _parse_routing(routing)
 	from flow.routing.orchestrator import resolve_turn
+	# Skills are deferred to the next rollout. Preserve the `skill` API argument
+	# for backwards compatibility, but treat slash-prefixed text as normal chat input.
 
-	convo, decision = resolve_turn(input.strip(), agent, session, model, routing)
+	convo, decision = resolve_turn(
+		input.strip() or "Analyze attached files with OCR and detect their document type.",
+		agent, session, model, routing,
+		file_only=bool(files) and not input.strip(),
+	)
 	out = convo.chat(
 		input,
 		attachments=files,
@@ -72,6 +79,18 @@ def get_chat_history(query: str | None = None) -> list[dict[str, Any]]:
 	from flow.routing.conversation import chat_history
 
 	return chat_history((query or "").strip()[:200] or None)
+
+
+@frappe.whitelist()
+def delete_chat(name: str) -> None:
+	"""Delete one Recent Chats entry: a conversation (all its agent segments cascade) or a
+	legacy session. `resolve_chat` enforces ownership before anything is removed."""
+	require_flow_user()
+	if not isinstance(name, str) or not name.strip():
+		frappe.throw(_("Conversation is required."), title=_("Invalid Conversation"))
+	from flow.routing.conversation import delete_chat as remove_chat
+
+	remove_chat(name.strip())
 
 
 @frappe.whitelist()
@@ -453,6 +472,7 @@ def _summarize(run: FlowRun) -> dict[str, Any]:
 		"session": session.conversation or run.session,
 		"agent_session": run.session,
 		"agent": session.agent,
+		"skill": run.skill,
 		"routing_action": run.routing_action,
 		"routing_confidence": run.routing_confidence,
 		"routing_reason": run.routing_reason,

@@ -513,6 +513,31 @@ class TestStartRunAttachments(IntegrationTestCase):
 		self.assertEqual(attachment.run, payload["name"])
 		self.assertEqual(attachment.extracted_text, "the secret code is 1234")
 
+	def test_file_only_detection_stops_with_prompt(self):
+		file_doc = self._file()
+		captured, chat = self._capture()
+		with patch.object(Model, "chat", side_effect=chat):
+			first = start_run("  ", agent=self.agent.name, attachments=[file_doc.name])
+			start_run("Summarize only", session=first["session"], attachments=[file_doc.name])
+		self.assertIn("ATTACHMENT-ONLY TURN", captured[0][0]["content"])
+		self.assertNotIn("ATTACHMENT-ONLY TURN", captured[1][0]["content"])
+		session = frappe.get_doc("Flow Session", first["session"])
+		self.assertNotIn("ATTACHMENT-ONLY TURN", session.messages[0].content)
+		self.assertEqual(session.title, file_doc.file_name)
+
+	def test_auto_file_only_selects_ocr_agent(self):
+		file_doc = self._file()
+		with patch.object(Model, "chat", return_value=_final("Detected document")):
+			payload = start_run(attachments=[file_doc.name], routing="auto")
+		session = frappe.get_doc("Flow Session", payload["agent_session"])
+		self.assertEqual(session.agent, "OCR Agent")
+
+	def test_file_only_input_can_be_omitted(self):
+		file_doc = self._file()
+		with patch.object(Model, "chat", return_value=_final("Detected document")):
+			payload = start_run(agent=self.agent.name, attachments=[file_doc.name])
+		self.assertEqual(payload["status"], "Completed")
+
 	def test_attachment_replayed_on_later_turn(self):
 		file_doc = self._file()
 		captured, chat = self._capture()

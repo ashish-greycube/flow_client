@@ -1,8 +1,8 @@
 {
  "app": "flow",
  "charts": [],
- "content": "[{\"id\":\"flowHeader1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Flow</b></span>\",\"col\":12}},{\"id\":\"scChat00001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow Chat\",\"col\":3}},{\"id\":\"scAgent0001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow Agent\",\"col\":3}},{\"id\":\"scMacro0001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow Macro\",\"col\":3}},{\"id\":\"scSession01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow Session\",\"col\":3}},{\"id\":\"scKnow00001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow Knowledge Base\",\"col\":3}},{\"id\":\"flowManage1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Manage</b></span>\",\"col\":12}},{\"id\":\"cardConfig1\",\"type\":\"card\",\"data\":{\"card_name\":\"Configuration\",\"col\":3}},{\"id\":\"cardAgents1\",\"type\":\"card\",\"data\":{\"card_name\":\"Agents\",\"col\":3}},{\"id\":\"cardConvo01\",\"type\":\"card\",\"data\":{\"card_name\":\"Conversations\",\"col\":3}},{\"id\":\"cardKnow001\",\"type\":\"card\",\"data\":{\"card_name\":\"Knowledge\",\"col\":3}}]",
- "creation": "2026-09-08 12:08:56.087615",
+ "content": "[{\"id\":\"flowHeader1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Flow.ai</b></span>\",\"col\":12}},{\"id\":\"scChat00001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow.ai Chat\",\"col\":3}},{\"id\":\"scAgent0001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow.ai Agent\",\"col\":3}},{\"id\":\"scMacro0001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow.ai Macro\",\"col\":3}},{\"id\":\"scSession01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow.ai Session\",\"col\":3}},{\"id\":\"scKnow00001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow.ai Knowledge Base\",\"col\":3}},{\"id\":\"flowManage1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Manage</b></span>\",\"col\":12}},{\"id\":\"cardConfig1\",\"type\":\"card\",\"data\":{\"card_name\":\"Configuration\",\"col\":3}},{\"id\":\"cardAgents1\",\"type\":\"card\",\"data\":{\"card_name\":\"Agents\",\"col\":3}},{\"id\":\"cardConvo01\",\"type\":\"card\",\"data\":{\"card_name\":\"Conversations\",\"col\":3}},{\"id\":\"cardKnow001\",\"type\":\"card\",\"data\":{\"card_name\":\"Knowledge\",\"col\":3}}]",
+ "creation": "2026-09-07 15:00:07.917291",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
@@ -27,7 +27,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Flow Agent",
+   "label": "Flow.ai Agent",
    "link_count": 0,
    "link_to": "Flow Agent",
    "link_type": "DocType",
@@ -37,7 +37,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Flow Tool",
+   "label": "Flow.ai Tool",
    "link_count": 0,
    "link_to": "Flow Tool",
    "link_type": "DocType",
@@ -47,7 +47,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Flow Trigger",
+   "label": "Flow.ai Trigger",
    "link_count": 0,
    "link_to": "Flow Trigger",
    "link_type": "DocType",
@@ -57,7 +57,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Flow Macro",
+   "label": "Flow.ai Macro",
    "link_count": 0,
    "link_to": "Flow Macro",
    "link_type": "DocType",
@@ -67,7 +67,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Flow Macro Run",
+   "label": "Flow.ai Macro Run",
    "link_count": 0,
    "link_to": "Flow Macro Run",
    "link_type": "DocType",
@@ -86,7 +86,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Flow Knowledge Base",
+   "label": "Flow.ai Knowledge Base",
    "link_count": 0,
    "link_to": "Flow Knowledge Base",
    "link_type": "DocType",
@@ -96,7 +96,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Flow Knowledge Source",
+   "label": "Flow.ai Knowledge Source",
    "link_count": 0,
    "link_to": "Flow Knowledge Source",
    "link_type": "DocType",
@@ -115,7 +115,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Flow Session",
+   "label": "Flow.ai Session",
    "link_count": 0,
    "link_to": "Flow Session",
    "link_type": "DocType",
@@ -125,7 +125,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Flow Run",
+   "label": "Flow.ai Run",
    "link_count": 0,
    "link_to": "Flow Run",
    "link_type": "DocType",
@@ -144,7 +144,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Flow Model",
+   "label": "Flow.ai Model",
    "link_count": 0,
    "link_to": "Flow Model",
    "link_type": "DocType",
@@ -154,7 +154,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Flow Provider",
+   "label": "Flow.ai Provider",
    "link_count": 0,
    "link_to": "Flow Provider",
    "link_type": "DocType",
@@ -164,7 +164,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Flow Knowledge Settings",
+   "label": "Flow.ai Knowledge Settings",
    "link_count": 0,
    "link_to": "Flow Knowledge Settings",
    "link_type": "DocType",
@@ -172,7 +172,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-09-08 12:20:34.487628",
+ "modified": "2026-09-09 13:25:19.435669",
  "modified_by": "Administrator",
  "module": "Flow",
  "name": "Flow",
@@ -181,49 +181,46 @@
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
- "roles": [
-  {
-   "role": "Flow User"
-  },
-  {
-   "role": "System Manager"
-  }
- ],
+ "roles": [],
  "sequence_id": 1.0,
  "shortcuts": [
   {
    "color": "Blue",
    "doc_view": "",
-   "label": "Flow Chat",
+   "label": "Flow.ai Chat",
    "link_to": "flow-chat",
    "type": "Page"
   },
   {
    "color": "Blue",
    "doc_view": "List",
-   "label": "Flow Agent",
+   "label": "Flow.ai Agent",
    "link_to": "Flow Agent",
-   "type": "DocType"
-  },
-  {
-   "color": "Green",
-   "doc_view": "List",
-   "label": "Flow Knowledge Base",
-   "link_to": "Flow Knowledge Base",
+   "stats_filter": "[]",
    "type": "DocType"
   },
   {
    "color": "Purple",
    "doc_view": "List",
-   "label": "Flow Macro",
+   "label": "Flow.ai Macro",
    "link_to": "Flow Macro",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Flow.ai Knowledge Base",
+   "link_to": "Flow Knowledge Base",
+   "stats_filter": "[]",
    "type": "DocType"
   },
   {
    "color": "Orange",
    "doc_view": "List",
-   "label": "Flow Session",
+   "label": "Flow.ai Session",
    "link_to": "Flow Session",
+   "stats_filter": "[]",
    "type": "DocType"
   }
  ],

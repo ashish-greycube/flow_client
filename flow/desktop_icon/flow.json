@@ -1,0 +1,23 @@
+{
+ "app": "flow",
+ "bg_color": "gray",
+ "creation": "2026-08-26 13:35:22.683558",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon": "integration",
+ "icon_type": "Link",
+ "idx": 0,
+ "label": "Flow",
+ "link_to": "Flow",
+ "link_type": "Workspace Sidebar",
+ "logo_url": "/assets/flow/images/flow-logo.svg",
+ "modified": "2026-09-09 12:30:49.477215",
+ "modified_by": "Administrator",
+ "name": "Flow",
+ "owner": "Administrator",
+ "restrict_removal": 0,
+ "roles": [],
+ "sidebar": "Flow",
+ "standard": 1
+}

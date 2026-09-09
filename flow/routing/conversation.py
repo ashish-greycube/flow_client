@@ -18,13 +18,21 @@ HANDOFF_MESSAGE_COUNT = 6
 
 def create_conversation(input: str, routing_mode: str, *, title: str | None = None):
 	frappe.has_permission("Flow Conversation", "create", throw=True)
-	return frappe.get_doc(
+	conversation = frappe.get_doc(
 		{
 			"doctype": "Flow Conversation",
 			"title": title or derive_title(input),
 			"routing_mode": routing_mode,
 		}
 	).insert()
+	# The naive title above (first-line truncation) shows instantly; refine it in the
+	# background into a short, meaning-based one — skipped when the caller supplied its
+	# own title (e.g. adopt_session, which has no real first prompt to summarize).
+	if not title and input.strip():
+		from flow.routing.title import enqueue_title
+
+		enqueue_title("Flow Conversation", conversation.name, input.strip(), None)
+	return conversation
 
 
 def adopt_session(session, routing_mode: str):
@@ -140,6 +148,13 @@ def chat_sessions(name: str) -> list[str]:
 	if not conversation:
 		return [session.name]
 	return [row.name for row in _conversation_sessions(conversation.name)]
+
+
+def delete_chat(name: str) -> None:
+	"""Delete a conversation (its agent segments cascade via on_trash) or a legacy session."""
+	conversation, session = resolve_chat(name)
+	target = conversation or session
+	frappe.delete_doc(target.doctype, target.name, ignore_permissions=True)
 
 
 def _active_session(conversation: str):

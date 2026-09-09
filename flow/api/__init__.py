@@ -2,6 +2,7 @@
 from flow.api.api import (
 	attach_file,
 	create_macro_from_prompts,
+	delete_chat,
 	get_agent_tool_permissions,
 	get_agent_tools,
 	get_chat,
@@ -19,6 +20,7 @@ from flow.api.api import (
 __all__ = [
 	"attach_file",
 	"create_macro_from_prompts",
+	"delete_chat",
 	"get_agent_tool_permissions",
 	"get_agent_tools",
 	"get_chat",
