@@ -16,6 +16,7 @@
   "routing_action",
   "routing_confidence",
   "routing_reason",
+  "skill",
   "section_break_io",
   "input",
   "output",
@@ -121,6 +122,15 @@
    "fieldname": "routing_reason",
    "fieldtype": "Small Text",
    "label": "Routing Reason",
+   "read_only": 1
+  },
+  {
+   "description": "Task skill applied to this run.",
+   "fieldname": "skill",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Skill",
+   "options": "Flow Skill",
    "read_only": 1
   },
   {

@@ -62,6 +62,7 @@ def describe(doctype: str, name: str | None = None) -> dict[str, Any]:
 			"label": f.label,
 			"type": f.fieldtype,
 			"options": f.options,
+			"default": f.default,
 			"required": bool(f.reqd),
 		}
 		for f in meta.fields
@@ -336,21 +337,27 @@ def _apply_action(doctype: str, name: str, action: str, args: dict[str, Any]) ->
 		_("Create {0} {1} record(s):\n\n{2}").format(
 			len(args.get("records") or []),
 			args.get("doctype", "?"),
-			_summarize_values((args.get("records") or [{}])[0]),
+			_summarize_values(
+				_with_create_defaults(
+					args.get("doctype", "?"),
+					(args.get("records") or [{}])[0],
+				)
+			),
 		)
 	),
 )
 def create(doctype: str, records: list[dict[str, Any]]) -> dict[str, Any]:
-	"""Create one or more records. `records` is a list of field-value dicts, each validated and inserted."""
+	"""Create validated records, applying safe date and company naming-series defaults."""
 	if not frappe.has_permission(doctype, "create"):
 		raise PermissionError(f"No permission to create {doctype}")
 
+	default_date = frappe.utils.today()
 	created: list[str] = []
 	failures: list[dict[str, Any]] = []
 	for row, values in enumerate(records):
 		try:
 			doc = frappe.new_doc(doctype)
-			doc.update(values or {})
+			doc.update(_with_create_defaults(doctype, values, default_date))
 			doc.insert()
 			created.append(doc.name)
 		except Exception as e:
@@ -360,6 +367,69 @@ def create(doctype: str, records: list[dict[str, Any]]) -> dict[str, Any]:
 	if failures:
 		result["failures"] = failures
 	return result
+
+
+def _with_create_defaults(
+	doctype: str,
+	values: dict[str, Any] | None,
+	default_date: str | None = None,
+) -> dict[str, Any]:
+	resolved = _with_default_transaction_dates(doctype, values, default_date)
+	return _with_recent_company_naming_series(doctype, resolved)
+
+
+def _with_default_transaction_dates(
+	doctype: str,
+	values: dict[str, Any] | None,
+	default_date: str | None = None,
+) -> dict[str, Any]:
+	resolved = dict(values or {})
+	meta = frappe.get_meta(doctype)
+	for fieldname in ("posting_date", "transaction_date"):
+		if meta.has_field(fieldname) and not resolved.get(fieldname):
+			resolved[fieldname] = default_date or frappe.utils.today()
+	return resolved
+
+
+def _with_recent_company_naming_series(
+	doctype: str,
+	values: dict[str, Any],
+) -> dict[str, Any]:
+	resolved = dict(values)
+	meta = frappe.get_meta(doctype)
+	company = resolved.get("company")
+	if resolved.get("naming_series") or not company:
+		return resolved
+	if not meta.has_field("naming_series") or not meta.has_field("company"):
+		return resolved
+
+	order_by = "creation desc"
+	if meta.has_field("posting_date"):
+		order_by = "posting_date desc, creation desc"
+	elif meta.has_field("transaction_date"):
+		order_by = "transaction_date desc, creation desc"
+	try:
+		recent = frappe.get_list(
+			doctype,
+			filters={"company": company, "naming_series": ["is", "set"]},
+			fields=["naming_series"],
+			order_by=order_by,
+			limit=1,
+		)
+	except frappe.PermissionError:
+		return resolved
+	if not recent:
+		return resolved
+
+	series = recent[0].get("naming_series")
+	options = {
+		option.strip()
+		for option in ((meta.get_field("naming_series").options or "").splitlines())
+		if option.strip()
+	}
+	if series and (not options or series in options):
+		resolved["naming_series"] = series
+	return resolved
 
 
 @tool(

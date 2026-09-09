@@ -4,6 +4,7 @@ import { useStore } from "@/store";
 import { writePanelState } from "@/lib/panelState";
 import { applyTheme, watchDesktopTheme } from "@/lib/theme";
 import "@/index.css";
+import "@/flow-app/theme.css";
 
 // Floating chat widget injected into every desk page: a launcher button that
 // toggles a small popup (App.vue), with a "Full chat" link out to the

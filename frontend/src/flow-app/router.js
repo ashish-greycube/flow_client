@@ -127,7 +127,8 @@ function toVueLocation(segments) {
 		if (!sub) return { name: "knowledge-bases" };
 		if (sub === "new") return { name: "knowledge-base-new" };
 		if (sourcesWord === "sources") {
-			if (sourceSub === "new") return { name: "knowledge-source-new", params: { name: sub } };
+			if (sourceSub === "new")
+				return { name: "knowledge-source-new", params: { name: sub } };
 			if (sourceSub) {
 				return { name: "knowledge-source-edit", params: { name: sub, source: sourceSub } };
 			}

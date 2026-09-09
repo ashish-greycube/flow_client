@@ -1,0 +1,122 @@
+{
+ "actions": [],
+ "autoname": "field:command",
+ "creation": "2026-09-08 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "command",
+  "enabled",
+  "is_system_generated",
+  "column_break_meta",
+  "description",
+  "section_break_instructions",
+  "instructions",
+  "section_break_tools",
+  "tools"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "description": "Slash command without the leading slash, for example create-sales-invoice.",
+   "fieldname": "command",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Command",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Enabled"
+  },
+  {
+   "default": "0",
+   "description": "Skills created and maintained by Flow.",
+   "fieldname": "is_system_generated",
+   "fieldtype": "Check",
+   "label": "System Generated",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_meta",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Short explanation shown in slash-command search.",
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Description",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_instructions",
+   "fieldtype": "Section Break",
+   "label": "Instructions"
+  },
+  {
+   "description": "Task-specific rules added to the selected agent for this run only.",
+   "fieldname": "instructions",
+   "fieldtype": "Long Text",
+   "ignore_xss_filter": 1,
+   "label": "Instructions",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_tools",
+   "fieldtype": "Section Break",
+   "label": "Allowed Tools"
+  },
+  {
+   "description": "Tools required by this skill. The agent selected in the composer must provide them. Empty makes the skill prompt-only.",
+   "fieldname": "tools",
+   "fieldtype": "Table MultiSelect",
+   "label": "Tools",
+   "options": "Flow Skill Tool"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-08 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Flow",
+ "name": "Flow Skill",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Flow User",
+   "select": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "show_title_field_in_link": 1,
+ "sort_field": "title",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

@@ -10,6 +10,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from flow.agent_instructions import RUNTIME_REQUEST_RESOLUTION_INSTRUCTIONS
+
 if TYPE_CHECKING:
 	from collections.abc import Generator
 
@@ -164,6 +166,19 @@ class FlowSession(Document):
 		self._assert_not_blocked()
 		attachment_data = self._load_attachments(attachments)
 		if not self.title:
+			title_input = input.strip() or (attachment_data[0]["file_name"] if attachment_data else "")
+			self.db_set("title", derive_title(title_input))
+			# A conversation-backed session's title is pre-set from the conversation (which
+			# already refines its own title — see create_conversation) and never hits this
+			# branch; this is the legacy no-conversation path, so refine here instead.
+			if input.strip():
+				from flow.routing.title import enqueue_title
+
+				enqueue_title("Flow Session", self.name, input.strip(), self.model)
+		
+		runtime = self._runtime
+		run_snapshot = dict(self._snapshot)
+		if not self.title:
 			self.db_set("title", derive_title(input))
 
 		run = create_run(
@@ -173,7 +188,7 @@ class FlowSession(Document):
 			trigger=trigger,
 			reference_doctype=reference_doctype,
 			reference_name=reference_name,
-			config_snapshot=self._snapshot,
+			config_snapshot=run_snapshot,
 			routing_action=routing_action,
 			routing_confidence=routing_confidence,
 			routing_reason=routing_reason,
@@ -189,16 +204,16 @@ class FlowSession(Document):
 
 		# Opt-in (set on the Flow Trigger): run confirmation tools without approval so unattended
 		# trigger runs don't park in Paused waiting for a confirmation no one can give.
-		self._runtime.auto_approve = auto_approve
+		runtime.auto_approve = auto_approve
 
 		# The update_memory tool reads this to stamp source_run. Scope tightly to the runtime
 		# call and clear after, so a stale run never leaks onto a later write in this request.
 		_set_active_run(run.name)
 		if stream:
-			return stream_with_persistence(lambda: self._runtime.run(run_input, stream=True), run)
+			return stream_with_persistence(lambda: runtime.run(run_input, stream=True), run)
 
 		try:
-			result = self._runtime.run(run_input)
+			result = runtime.run(run_input)
 		except Exception as e:
 			run.mark_failed(str(e))
 			# Persist Failed too; the Running run is already committed.
@@ -318,16 +333,19 @@ class FlowSession(Document):
 		run = frappe.get_doc("Flow Run", run_name)
 
 		self.reload()
+		snapshot = json.loads(run.config_snapshot) if run.config_snapshot else {}
 		messages = self._build_prompt_messages()
 		if not messages:
 			frappe.throw(_("This session has no transcript to resume from."))
 
+		# A paused run from the Skills rollout resumes with its base agent only.
+		runtime = self._runtime
 		_set_active_run(run.name)
 		if stream:
-			return stream_with_persistence(lambda: self._runtime.resume(messages, answers, stream=True), run)
+			return stream_with_persistence(lambda: runtime.resume(messages, answers, stream=True), run)
 
 		try:
-			result = self._runtime.resume(messages, answers)
+			result = runtime.resume(messages, answers)
 		except Exception as e:
 			run.mark_failed(str(e))
 			raise
@@ -340,17 +358,24 @@ class FlowSession(Document):
 		"""Transcript as sent to the model. Augmentation is ephemeral — stored messages stay
 		clean (file text lives only in the attachments child table):
 
+		- Runtime context: current site-local date, time, and timezone.
+		- Agent memory: the agent's saved memories are appended to the system message.
 		- Inline files: full text re-injected on their turn, clamped to the remaining budget.
 		- Retrieval files: a short note marks where each was attached; for the latest user turn
 		  the most relevant chunks (by that turn's query) are injected in place of the full text.
-		- Agent memory: the agent's saved memories are appended to the system message.
 		"""
 		from flow.knowledge.retriever import retrieve_attachments
 		from flow.memory.memory import build_memory_block
 
 		attachments_by_run = self._group_attachments_by_run()
 		last_user_run = self._latest_user_run()
-		query = self._latest_user_content() if any(a.mode == "Retrieval" for a in self.attachments) else None
+		latest_content = self._latest_user_content()
+		file_only = bool(attachments_by_run.get(last_user_run)) and not latest_content.strip()
+		query = None
+		if any(a.mode == "Retrieval" for a in self.attachments):
+			query = latest_content or (
+				"document type issuer recipient invoice order receipt totals line items" if file_only else None
+			)
 		budget = self._file_injection_budget()
 
 		messages: list[dict[str, Any]] = []
@@ -361,6 +386,10 @@ class FlowSession(Document):
 				attachments = attachments_by_run.get(row.run, [])
 				inline = [a for a in attachments if a.mode == "Inline"]
 				retrieval = [a for a in attachments if a.mode == "Retrieval"]
+				if attachments:
+					content = (content or "") + "\n\nAttached File identifiers: " + json.dumps(
+						[a.file for a in attachments]
+					)
 				if inline:
 					content, budget = _inject_inline_files(content, inline, budget)
 				if retrieval:
@@ -371,12 +400,16 @@ class FlowSession(Document):
 				message["content"] = content
 			messages.append(message)
 
-		memory_block = build_memory_block(self.agent, query=self._latest_user_content())
-		if memory_block:
+		if file_only:
+			from flow.assistant.ocr_agent import FILE_ONLY_INTENT_INSTRUCTIONS
+
 			if messages and messages[0]["role"] == "system":
-				messages[0]["content"] = f"{messages[0]['content']}\n\n{memory_block}"
+				messages[0]["content"] += "\n\n" + FILE_ONLY_INTENT_INSTRUCTIONS
 			else:
-				messages.insert(0, {"role": "system", "content": memory_block})
+				messages.insert(0, {"role": "system", "content": FILE_ONLY_INTENT_INSTRUCTIONS})
+
+		_append_system_block(messages, _runtime_context_block())
+		_append_system_block(messages, build_memory_block(self.agent, query=self._latest_user_content()))
 		return messages
 
 	def _latest_user_run(self) -> str | None:
@@ -472,6 +505,29 @@ def _row_to_message(row) -> dict[str, Any]:
 	if row.tool_calls:
 		message["tool_calls"] = json.loads(row.tool_calls)
 	return message
+
+
+def _runtime_context_block() -> str:
+	now = frappe.utils.now_datetime()
+	timezone = frappe.utils.get_system_timezone() or "UTC"
+	return (
+		"RUNTIME DATE AND TIME\n"
+		f"Current site date: {now:%Y-%m-%d} ({now:%A})\n"
+		f"Current site time: {now:%H:%M:%S}\n"
+		f"Site timezone: {timezone}\n"
+		"Treat this context as authoritative. Interpret relative dates such as today, tomorrow, "
+		"and yesterday from this site-local date, and use ISO YYYY-MM-DD values for date filters.\n\n"
+		f"{RUNTIME_REQUEST_RESOLUTION_INSTRUCTIONS}"
+	)
+
+
+def _append_system_block(messages: list[dict[str, Any]], block: str | None) -> None:
+	if not block:
+		return
+	if messages and messages[0]["role"] == "system":
+		messages[0]["content"] = f"{messages[0]['content']}\n\n{block}"
+	else:
+		messages.insert(0, {"role": "system", "content": block})
 
 
 def _inject_inline_files(content: str | None, attachments: list[Any], budget: int) -> tuple[str, int]:

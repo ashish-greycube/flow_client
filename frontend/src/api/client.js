@@ -52,7 +52,8 @@ export const loadKnowledgeBases = () =>
 // Full CRUD for the Agents page's create/edit dialog — plain frappe.client
 // calls (the same generic whitelisted methods this file already uses
 // elsewhere), so no new server-side endpoint is needed.
-export const getAgent = (name) => frappe.xcall("frappe.client.get", { doctype: "Flow Agent", name });
+export const getAgent = (name) =>
+	frappe.xcall("frappe.client.get", { doctype: "Flow Agent", name });
 
 export const createAgent = (values) =>
 	frappe.xcall("frappe.client.insert", { doc: { doctype: "Flow Agent", ...values } });
@@ -68,7 +69,8 @@ export const createAgent = (values) =>
 // Title is still never the thing that changes docname here — Flow Agent is
 // `autoname: "field:title"`, so an actual rename (renameAgent below) has to
 // happen first when the title changed.
-export const saveAgent = (doc) => frappe.xcall("frappe.client.save", { doc: { doctype: "Flow Agent", ...doc } });
+export const saveAgent = (doc) =>
+	frappe.xcall("frappe.client.save", { doc: { doctype: "Flow Agent", ...doc } });
 
 // Renames the document (Flow Agent's title IS its name — see saveAgent's
 // note). Returns the name actually used, which can differ slightly from
@@ -164,6 +166,9 @@ export const loadHistory = () => frappe.xcall("flow.api.get_chat_history");
 export const searchSessions = (query) => frappe.xcall("flow.api.get_chat_history", { query });
 
 export const getSession = (name) => frappe.xcall("flow.api.get_chat", { name });
+
+// Deletes a conversation (its agent segments cascade server-side) or a legacy session.
+export const deleteChat = (name) => frappe.xcall("flow.api.delete_chat", { name });
 
 export const getPausedRun = (name) => frappe.xcall("flow.api.get_chat_paused_run", { name });
 

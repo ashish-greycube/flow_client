@@ -54,8 +54,8 @@ function ensureImmersiveStyle() {
 			margin-top: 0 !important;
 			overflow: hidden !important;
 		}
-		body[data-route^="flow-chat"] #flow-chat-root,
-		body[data-route^="flow-chat"] #flow-root {
+		.page-container[data-page-route="flow-chat"] #flow-chat-root,
+		.page-container[data-page-route="flow-chat"] #flow-root {
 			position: fixed !important;
 			inset: 0 !important;
 			z-index: 1020;

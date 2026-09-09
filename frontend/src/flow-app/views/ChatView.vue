@@ -76,7 +76,7 @@ watch(sessionName, (name) => {
 </script>
 
 <template>
-	<div ref="page" class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-surface-white">
+	<div ref="page" class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-surface-gray-1">
 		<header
 			class="flex items-center justify-between border-b border-outline-gray-1 px-4 py-2.5"
 		>

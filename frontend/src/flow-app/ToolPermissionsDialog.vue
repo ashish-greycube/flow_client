@@ -117,7 +117,9 @@ function groupLabel(list) {
 		<div
 			class="fixed left-1/2 top-1/2 z-50 flex max-h-[85vh] w-[36rem] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl border border-outline-gray-2 bg-surface-white shadow-2xl"
 		>
-			<header class="flex items-center justify-between border-b border-outline-gray-1 px-4 py-3">
+			<header
+				class="flex shrink-0 items-center justify-between border-b border-outline-gray-1 px-4 py-3"
+			>
 				<div>
 					<div class="text-sm font-semibold text-ink-gray-9">{{ __("Tool Permissions") }}</div>
 					<div v-if="agentLabel" class="text-xs text-ink-gray-5">
@@ -143,11 +145,14 @@ function groupLabel(list) {
 				{{ __("This agent has no tools configured.") }}
 			</div>
 
-			<fieldset
+			<div
 				v-else
-				:disabled="!canEdit"
-				class="flow-scrollbar flex flex-col gap-5 overflow-y-auto px-4 py-4 disabled:opacity-60"
+				class="flow-scrollbar min-h-0 max-h-[calc(85vh-7rem)] flex-1 overflow-y-auto"
 			>
+				<fieldset
+					:disabled="!canEdit"
+					class="flex flex-col gap-5 px-4 py-4 disabled:opacity-60"
+				>
 				<section v-if="readOnly.length">
 					<div class="mb-1.5 flex items-center justify-between">
 						<div class="flex items-center gap-2">
@@ -253,9 +258,10 @@ function groupLabel(list) {
 						</div>
 					</div>
 				</section>
-			</fieldset>
+				</fieldset>
+			</div>
 
-			<footer class="flex justify-end border-t border-outline-gray-1 px-4 py-3">
+			<footer class="flex shrink-0 justify-end border-t border-outline-gray-1 px-4 py-3">
 				<Button variant="solid" @click="close">{{ __("Done") }}</Button>
 			</footer>
 		</div>

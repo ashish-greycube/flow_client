@@ -41,33 +41,34 @@
 	--outline-gray-4: #2e9bd6;
 }
 
-/* Dark mode — an actual distinct palette, not the light values re-applied.
-   Surfaces move to a near-black navy/charcoal scale; text moves to a light
-   grey/white scale; the brand accent blue (#2e9bd6) stays constant across
-   both themes and takes over the "solid surface" role (Send button, brand
-   mark) since the light theme's navy would have too little contrast against
-   a dark page. */
+/* Dark mode uses #232323 for the page, sidebar, cards, and composer. Nearby
+   warm-charcoal tokens preserve hover and selected-state hierarchy. Every
+   text token keeps at least 4.8:1 contrast against the base surface, including
+   the smallest captions. */
 [data-theme="dark"] {
-	--surface-white: #0f172a;
-	--surface-gray-1: #16202f;
-	--surface-gray-2: #1e293b;
-	--surface-gray-3: #263447;
-	--surface-gray-4: #334155;
+	--surface-white: #232323;
+	--surface-gray-1: #232323;
+	--surface-cards: #232323;
+	--surface-menu-bar: #232323;
+	--surface-modal: #232323;
+	--surface-gray-2: #2d2a2a;
+	--surface-gray-3: #383434;
+	--surface-gray-4: #464141;
 	--surface-gray-5: #2e9bd6;
 	--surface-gray-6: #2e9bd6;
 	--surface-gray-7: #2e9bd6;
 
 	--ink-white: #ffffff;
-	--ink-gray-9: #f1f5f9;
-	--ink-gray-8: #e2e8f0;
-	--ink-gray-7: #cbd5e1;
-	--ink-gray-6: #94a3b8;
-	--ink-gray-5: #94a3b8;
-	--ink-gray-4: #64748b;
-	--ink-gray-3: #64748b;
+	--ink-gray-9: #f7f4f4;
+	--ink-gray-8: #eee9e9;
+	--ink-gray-7: #ddd6d6;
+	--ink-gray-6: #c8bebe;
+	--ink-gray-5: #b2a8a8;
+	--ink-gray-4: #a79d9d;
+	--ink-gray-3: #978e8e;
 
-	--outline-gray-1: #263447;
-	--outline-gray-2: #334155;
+	--outline-gray-1: #3a3636;
+	--outline-gray-2: #4a4545;
 	--outline-gray-3: #2e9bd6;
 	--outline-gray-4: #2e9bd6;
 }
@@ -91,13 +92,13 @@
 
 /* Same neutral-grey intent as above, lightened for a dark sidebar surface. */
 [data-theme="dark"] .flow-sidebar {
-	--ink-gray-9: #f1f5f9;
-	--ink-gray-8: #e2e8f0;
-	--ink-gray-7: #cbd5e1;
-	--ink-gray-6: #cbd5e1;
-	--ink-gray-5: #94a3b8;
-	--ink-gray-4: #64748b;
-	--ink-gray-3: #475569;
+	--ink-gray-9: #f7f4f4;
+	--ink-gray-8: #eee9e9;
+	--ink-gray-7: #ddd6d6;
+	--ink-gray-6: #c8bebe;
+	--ink-gray-5: #b2a8a8;
+	--ink-gray-4: #a79d9d;
+	--ink-gray-3: #978e8e;
 }
 
 /* The GreyCube logo is a dark mark on an opaque white card — invisible (worse,
@@ -115,6 +116,12 @@
 .flow-sidebar * {
 	font-size: 13px !important;
 	font-weight: 400 !important;
+}
+
+/* Brand wordmark opts out of the flat sidebar sizing above. */
+.flow-sidebar .flow-sidebar-title {
+	font-size: 20px !important;
+	font-weight: 700 !important;
 }
 
 /* Keep document-editor breadcrumbs compact beside the header actions. */

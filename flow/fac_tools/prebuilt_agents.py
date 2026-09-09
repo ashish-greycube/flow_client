@@ -9,6 +9,12 @@ from typing import Any
 
 import frappe
 
+from flow.agent_instructions import (
+	DOCUMENT_WRITE_VALIDATION_INSTRUCTIONS,
+	SALES_INVOICE_CREATION_INSTRUCTIONS,
+	STRICT_AGENT_VALIDATION_INSTRUCTIONS,
+)
+
 SOURCE_LABEL = "Jarvis description-based Flow adaptation"
 READ_TOOLS = (
 	"describe",
@@ -90,6 +96,8 @@ def _instructions(specification: dict[str, Any]) -> str:
 	doctypes = "\n".join(f"- {doctype}" for doctype in specification["doctypes_required"])
 	writes = specification.get("writes") or []
 	write_section = _write_instructions(writes)
+	validation_section = _write_validation_instructions(writes)
+	profile_section = _instruction_profile(specification.get("instruction_profile"))
 	return f"""You are the {specification['title']}, a prebuilt {specification['nature']} agent.
 
 PURPOSE
@@ -108,7 +116,10 @@ WORK METHOD
 4. Use a saved report only when its reference DocType is in scope. Inspect its requirements before the first run.
 5. Cross-check material findings against the underlying records. Separate facts, assumptions, missing evidence, and recommendations.
 6. Report concise evidence first. Never describe incomplete coverage as a clean result.
+{STRICT_AGENT_VALIDATION_INSTRUCTIONS}
 {write_section}
+{validation_section}
+{profile_section}
 
 PERMISSIONS AND SAFETY
 All reads, reports, and writes run as the current Frappe user and must respect role, field, row, company, and User Permission restrictions. Never claim visibility beyond the returned data. Never submit, cancel, delete, email, file a statutory return, or perform an undeclared action.
@@ -126,4 +137,16 @@ def _write_instructions(writes: list[dict[str, Any]]) -> str:
 DECLARED WRITE CONTRACT
 You may propose changes through Flow's confirmed create/update tools only for:
 {contracts}
-Before calling either tool, read the relevant evidence and show the exact proposed values. Create or update drafts only; never set docstatus. A successful draft is still a proposal requiring human review and submission."""
+Before calling either tool, read the relevant evidence and prepare the exact proposed values as tool arguments. Do not ask for confirmation in chat; call the tool once so Flow opens its approval window. Create or update drafts only; never set docstatus. A successful draft is still a proposal requiring human review and submission."""
+
+
+def _write_validation_instructions(writes: list[dict[str, Any]]) -> str:
+	return DOCUMENT_WRITE_VALIDATION_INSTRUCTIONS if writes else ""
+
+
+def _instruction_profile(profile: str | None) -> str:
+	if not profile:
+		return ""
+	if profile == "create-sales-invoice":
+		return f"\nSALES INVOICE CREATION RULES\n{SALES_INVOICE_CREATION_INSTRUCTIONS}"
+	raise ValueError(f"Unknown prebuilt agent instruction profile: {profile}")

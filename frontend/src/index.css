@@ -11,6 +11,8 @@
 	--text-sm: 14px;
 	--text-base: 15px;
 	--text-lg: 17px;
+	font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+	font-weight: 400;
 }
 
 /* A variable font, deliberately not frappe-ui's default Inter (nor the desk's

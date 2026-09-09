@@ -42,12 +42,14 @@
       "domain": "ar",
       "nature": "operator",
       "status": "Published",
-      "version": "0.1.0",
-      "description": "Sweeps the overdue receivables book each day, nets the true residual per invoice, and risk-ranks who to chase. Stages a docstatus-0 draft Dunning per overdue customer with an escalating-by-bucket letter, and raises one Flow Approval Request carrying the prioritised follow-up worklist with per-account evidence. It proposes only; a human reviews the tone, sends, calls, and submits or discards every artifact. It never sends, reconciles, posts, or writes off.",
+      "version": "0.2.0",
+      "description": "Creates carefully validated draft Sales Invoices from supplied sales details, and sweeps the overdue receivables book to risk-rank who to chase. For invoice creation it verifies required values and references, asks for missing or ambiguous information, and creates only after explicit approval. For collections it stages draft Dunning records and raises evidence-carrying Flow Approval Requests. It proposes only; a human reviews and submits or discards every artifact. It never sends, reconciles, posts, writes off, or bypasses current-user permissions.",
+      "instruction_profile": "create-sales-invoice",
       "doctypes_required": [
         "Flow Approval Request",
         "Dunning",
         "Sales Invoice",
+        "Sales Invoice Item",
         "Payment Entry",
         "Payment Entry Reference",
         "Payment Ledger Entry",
@@ -55,6 +57,20 @@
         "Journal Entry Account",
         "Customer",
         "Customer Credit Limit",
+        "Item",
+        "Item Price",
+        "Price List",
+        "Company",
+        "Currency",
+        "UOM",
+        "Warehouse",
+        "Account",
+        "Cost Center",
+        "Sales Taxes and Charges Template",
+        "Sales Taxes and Charges",
+        "Payment Terms Template",
+        "Payment Schedule",
+        "Address",
         "Contact",
         "Communication"
       ],
@@ -65,6 +81,10 @@
         },
         {
           "doctype": "Dunning",
+          "mode": "draft"
+        },
+        {
+          "doctype": "Sales Invoice",
           "mode": "draft"
         }
       ],

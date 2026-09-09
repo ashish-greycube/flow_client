@@ -51,6 +51,7 @@ class FlowModel(Document):
 
 		sync_builtin_assistant(model=self.name)
 		sync_ocr_agent(model=self.name)
+		# Skills rollout is deferred; a new model must not provision skill records.
 
 	def _normalize(self):
 		for field in ("title", "model_id", "base_url"):

@@ -25,6 +25,7 @@ class RunStarted:
 	name: str
 	session: str
 	agent: str | None = None
+	skill: str | None = None
 	agent_session: str | None = None
 	routing_action: str | None = None
 	routing_confidence: float | None = None
@@ -61,6 +62,7 @@ class FlowRun(Document):
 		routing_confidence: DF.Float
 		routing_reason: DF.SmallText | None
 		session: DF.Link
+		skill: DF.Link | None
 		source: DF.Literal["Manual", "Trigger"]
 		status: DF.Literal["Running", "Paused", "Completed", "Failed"]
 		tool_calls: DF.JSON | None
@@ -141,6 +143,7 @@ def create_run(
 	trigger: str | None = None,
 	reference_doctype: str | None = None,
 	reference_name: str | None = None,
+	skill: str | None = None,
 	config_snapshot: dict[str, Any] | None = None,
 	routing_action: str | None = None,
 	routing_confidence: float | None = None,
@@ -157,6 +160,7 @@ def create_run(
 			"reference_doctype": reference_doctype,
 			"reference_name": reference_name,
 			"session": session,
+			"skill": skill,
 			"routing_action": routing_action,
 			"routing_confidence": routing_confidence,
 			"routing_reason": routing_reason,
@@ -210,6 +214,7 @@ def stream_with_persistence(
 		name=run.name,
 		session=session.conversation or run.session,
 		agent=session.agent,
+		skill=run.skill,
 		agent_session=run.session,
 		routing_action=run.routing_action,
 		routing_confidence=run.routing_confidence,

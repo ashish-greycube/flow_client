@@ -5,6 +5,11 @@ from __future__ import annotations
 
 import frappe
 
+from flow.agent_instructions import (
+	DOCUMENT_WRITE_VALIDATION_INSTRUCTIONS,
+	STRICT_AGENT_VALIDATION_INSTRUCTIONS,
+)
+
 ASSISTANT_AGENT_TITLE = "Flow"
 ASSISTANT_MAX_ITERATIONS = 40
 
@@ -59,6 +64,7 @@ ASSISTANT_INSTRUCTIONS = (
 	"tool silently; if a result changes your plan, say so. When you need a decision or detail you "
 	"cannot discover, end with a short plain-text question and stop. When the task is done, reply in "
 	"plain text."
+	f"\n\n{STRICT_AGENT_VALIDATION_INSTRUCTIONS}\n\n{DOCUMENT_WRITE_VALIDATION_INSTRUCTIONS}"
 )
 
 
