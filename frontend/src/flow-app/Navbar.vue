@@ -63,7 +63,7 @@ function onToggleTheme() {
 
 <template>
 	<header
-		class="flex h-12 shrink-0 items-center justify-end gap-2 border-b border-outline-gray-1 bg-surface-white px-4"
+		class="flex h-12 shrink-0 items-center justify-end gap-2 border-b border-outline-gray-1 bg-surface-gray-1 px-4"
 	>
 		<button
 			type="button"

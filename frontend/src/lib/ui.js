@@ -4,6 +4,7 @@ export { default as Button } from "frappe-ui/src/components/Button/Button.vue";
 export { default as FeatherIcon } from "frappe-ui/src/components/FeatherIcon.vue";
 export { default as Spinner } from "frappe-ui/src/components/Spinner.vue";
 export { default as Badge } from "frappe-ui/src/components/Badge/Badge.vue";
+export { default as Avatar } from "frappe-ui/src/components/Avatar/Avatar.vue";
 // Every component here is imported straight from its own source file rather
 // than through frappe-ui's `FormControl` dispatcher: FormControl eagerly
 // imports every field-type branch it supports (including icon-heavy ones like

@@ -89,6 +89,14 @@ export function toolError(result) {
 	return null;
 }
 
+// A failed tool call whose error reads as an access/permission problem, rather
+// than any other failure (validation, not found, network, …) — these get a
+// louder danger treatment in the UI since the fix is usually "ask an admin",
+// not "try again".
+export function isPermissionError(message) {
+	return typeof message === "string" && /permission|not permitted|not allowed|forbidden/i.test(message);
+}
+
 // create_chart's payload: {chart: {kind: "axis"|"donut"|"funnel"|"number", config}}.
 // A tool result matching this shape gets its own ChartCard instead of showing
 // as a generic activity step — see AssistantMessage.vue.

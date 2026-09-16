@@ -5,7 +5,7 @@ import ActivityLabel from "./ActivityLabel.vue";
 import ActivityStep from "./ActivityStep.vue";
 import ArgsView from "./ArgsView.vue";
 import ToolError from "./ToolError.vue";
-import { toolLabel, hasArgs, toolError } from "@/lib/toolMeta";
+import { toolLabel, hasArgs, toolError, isPermissionError } from "@/lib/toolMeta";
 import { __ } from "@/lib/translate";
 
 // Tool calls as one collapsible line: running → active step's label; done → latest
@@ -31,8 +31,16 @@ const summary = computed(() => {
 // A single tool call whose result is an error payload.
 const error = computed(() => (single.value ? toolError(props.parts[0].result) : null));
 
-// Only set on a resolved approval or failed line.
+// Insufficient-permission failures get a louder red treatment (border + icon)
+// instead of the default muted "Failed" text — the fix is usually "ask an
+// admin", so it shouldn't read the same as a step still quietly finishing up.
+const danger = computed(() => Boolean(error.value) && isPermissionError(error.value));
+
+// Only set on a resolved approval or failed line. A permission failure says so
+// directly in the collapsed line — "Insufficient permission" instead of a bare
+// "Failed" — so the reason is visible without expanding the card.
 const status = computed(() => {
+	if (danger.value) return __("Insufficient permission");
 	if (error.value) return __("Failed");
 	const a = single.value ? props.parts[0].approval : null;
 	if (a === "denied") return __("Denied");
@@ -51,18 +59,24 @@ function toggle() {
 </script>
 
 <template>
-	<div>
+	<div
+		class="rounded-md"
+		:class="danger ? 'border border-red-200 bg-red-50 px-4.5 py-3.5 -mx-2.5' : ''"
+	>
 		<button
 			class="flex items-center gap-1.5 text-sm transition-colors"
 			:class="[
-				open ? 'font-medium text-ink-gray-8' : 'text-ink-gray-5',
-				expandable && !running && !open ? 'hover:text-ink-gray-7' : '',
+				danger ? 'text-ink-red-4' : open ? 'font-medium text-ink-gray-8' : 'text-ink-gray-5',
+				expandable && !running && !open && !danger ? 'hover:text-ink-gray-7' : '',
 				expandable ? '' : 'cursor-default',
 			]"
 			@click="toggle"
 		>
+			<FeatherIcon v-if="danger" name="alert-triangle" class="h-3.5 w-3.5 shrink-0" />
 			<ActivityLabel :text="summary" :active="shimmer" />
-			<span v-if="status" class="text-xs text-ink-gray-5">· {{ status }}</span>
+			<span v-if="status" class="text-xs" :class="danger ? 'text-ink-red-4' : 'text-ink-gray-5'"
+				>· {{ status }}</span
+			>
 			<FeatherIcon
 				v-if="expandable"
 				name="chevron-right"
@@ -76,7 +90,8 @@ function toggle() {
 			the next block. Single: inputs directly; multiple: a connected timeline. -->
 			<div
 				v-if="open"
-				class="mb-2 mt-1.5 rounded-lg border border-outline-gray-1 px-3 py-2.5"
+				class="mb-2 mt-1.5 rounded-lg border px-3 py-2.5"
+				:class="danger ? 'border-red-200' : 'border-outline-gray-1'"
 			>
 				<template v-if="single">
 					<ArgsView :arguments="parts[0].arguments" />

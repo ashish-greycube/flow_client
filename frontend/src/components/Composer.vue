@@ -117,7 +117,17 @@ watch(focusTick, () => nextTick(() => el.value?.focus()));
 </script>
 
 <template>
-	<div class="absolute inset-x-5 bottom-3.5 mx-auto flex max-w-3xl flex-col gap-1.5">
+	<!-- The whole footer (input box + disclaimer + "Powered by") gets one solid
+	backdrop here: previously only the input box itself had a background, so
+	as it grew tall (multi-line text, attachments) the disclaimer/"Powered by"
+	lines — which have none — sat directly over whatever message content had
+	scrolled underneath, reading as see-through. The backdrop itself must
+	reach all the way to bottom-0 (not stop at the old bottom-3.5 gap) or
+	that leftover strip below it stays uncovered and the same bleed-through
+	shows up as a sliver of message text under "Powered by". -->
+	<div
+		class="absolute inset-x-5 bottom-0 mx-auto flex max-w-3xl flex-col gap-1.5 rounded-t-2xl bg-surface-white px-2 pb-3.5 pt-2.5"
+	>
 		<div
 			class="flow-composer relative flex flex-col gap-1.5 rounded-xl border bg-surface-white px-2.5 py-2 shadow-sm transition-[border-color,background-color] focus-within:border-outline-gray-3"
 			:class="dragging ? 'border-outline-gray-4 bg-surface-gray-1' : 'border-outline-gray-2'"

@@ -4,7 +4,7 @@ import { FeatherIcon, Spinner } from "@/lib/ui";
 import ActivityLabel from "./ActivityLabel.vue";
 import ArgsView from "./ArgsView.vue";
 import ToolError from "./ToolError.vue";
-import { toolLabel, toolContext, hasArgs, blockKeysFor, toolError } from "@/lib/toolMeta";
+import { toolLabel, toolContext, hasArgs, blockKeysFor, toolError, isPermissionError } from "@/lib/toolMeta";
 import { __ } from "@/lib/translate";
 
 // One timeline step. A fixed-width gutter holds the dot; connector lines are
@@ -23,6 +23,7 @@ const active = computed(
 const label = computed(() => toolLabel(props.part.name));
 const context = computed(() => toolContext(props.part.arguments));
 const error = computed(() => toolError(props.part.result));
+const danger = computed(() => Boolean(error.value) && isPermissionError(error.value));
 const expandable = computed(() => hasArgs(props.part.arguments) || Boolean(error.value));
 const blockKeys = computed(() => blockKeysFor(props.part.name));
 
@@ -40,9 +41,15 @@ function toggle() {
 			<div class="flex w-5 shrink-0 flex-col items-center">
 				<span class="w-px flex-1" :class="{ 'bg-surface-gray-3': number > 1 }"></span>
 				<span
-					class="z-[1] flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-outline-gray-1 bg-surface-white"
+					class="z-[1] flex h-5 w-5 shrink-0 items-center justify-center rounded-full border bg-surface-white"
+					:class="danger ? 'border-red-300' : 'border-outline-gray-1'"
 				>
 					<Spinner v-if="active" class="h-3 w-3 text-ink-gray-5" />
+					<FeatherIcon
+						v-else-if="danger"
+						name="alert-triangle"
+						class="h-3 w-3 text-ink-red-4"
+					/>
 					<span v-else class="text-[10px] leading-none tabular-nums text-ink-gray-4">
 						{{ number }}
 					</span>
@@ -62,8 +69,11 @@ function toggle() {
 				<span v-if="context" class="truncate text-xs text-ink-gray-4"
 					>· {{ context }}</span
 				>
-				<span v-if="error" class="shrink-0 text-xs text-ink-gray-5"
-					>· {{ __("Failed") }}</span
+				<span
+					v-if="error"
+					class="shrink-0 text-xs"
+					:class="danger ? 'font-medium text-ink-red-4' : 'text-ink-gray-5'"
+					>· {{ danger ? __("Insufficient permission") : __("Failed") }}</span
 				>
 				<span class="flex-1"></span>
 				<FeatherIcon

@@ -1,11 +1,11 @@
 <script setup>
-defineProps({ size: { type: Number, default: 18 } });
+defineProps({ size: { type: Number, default: 22 } });
 </script>
 
 <template>
 	<span
-		class="inline-flex shrink-0 items-center justify-center rounded-md bg-[#14110f] text-[#e8e3da]"
-		:style="{ width: `${size}px`, height: `${size}px` }"
+		class="inline-flex shrink-0 items-center justify-center bg-[#14110f] text-[#e8e3da]"
+		:style="{ width: `${size}px`, height: `${size}px`, borderRadius: '10px' }"
 	>
 		<svg
 			:width="size * 0.62"

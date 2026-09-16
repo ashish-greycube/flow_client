@@ -2,10 +2,13 @@
 import { ref, computed } from "vue";
 import MarkdownText from "./MarkdownText.vue";
 import ActivityGroup from "./ActivityGroup.vue";
+import ToolError from "./ToolError.vue";
 import ConfirmCard from "./ConfirmCard.vue";
 import ChartCard from "./ChartCard.vue";
 import FeedbackBar from "./FeedbackBar.vue";
 import WorkingIndicator from "./WorkingIndicator.vue";
+import ElapsedTime from "./ElapsedTime.vue";
+import BrandMark from "./BrandMark.vue";
 import { useStore } from "@/store";
 import { chartPayload } from "@/lib/toolMeta";
 
@@ -25,6 +28,10 @@ function isApproval(part) {
 const items = computed(() => {
 	const out = [];
 	for (const part of props.message.parts) {
+		if (part.type === "error") {
+			out.push({ kind: "error", id: part.id, message: part.message });
+			continue;
+		}
 		if (part.type !== "tool") {
 			out.push({ kind: "text", id: part.id, part });
 			continue;
@@ -62,32 +69,45 @@ const showFeedback = computed(
 
 // Reveal the feedback bar on hover; FeedbackBar keeps itself visible once rated.
 const hovered = ref(false);
+
+// Ticks while the turn is active; once finalized, only shows if a real duration
+// was recorded (a message rebuilt from history has none — pushAssistant(false)
+// never starts the clock).
+const showElapsed = computed(() => props.message.pending || props.message.elapsedMs != null);
 </script>
 
 <template>
-	<div
-		class="flow-parts flex flex-col"
-		@mouseenter="hovered = true"
-		@mouseleave="hovered = false"
-	>
-		<template v-for="(item, i) in items" :key="item.id">
-			<MarkdownText v-if="item.kind === 'text'" :part="item.part" />
-			<ConfirmCard
-				v-else-if="item.kind === 'confirm'"
-				:question="item.question"
-				:tool="item.part"
-				@answer="(answer) => answerQuestion(message, item.question, answer)"
-			/>
-			<ChartCard v-else-if="item.kind === 'chart'" :chart="item.chart" />
-			<ActivityGroup
-				v-else
-				:parts="item.parts"
-				:sealed="i < items.length - 1"
-				:live="message.pending"
-			/>
-		</template>
+	<div class="flex items-start gap-2.5">
+		<BrandMark :size="36" class="mt-0.5 shrink-0" />
+		<div
+			class="flow-parts flex min-w-0 flex-1 flex-col"
+			@mouseenter="hovered = true"
+			@mouseleave="hovered = false"
+		>
+			<template v-for="(item, i) in items" :key="item.id">
+				<MarkdownText v-if="item.kind === 'text'" :part="item.part" />
+				<ToolError v-else-if="item.kind === 'error'" :message="item.message" />
+				<ConfirmCard
+					v-else-if="item.kind === 'confirm'"
+					:question="item.question"
+					:tool="item.part"
+					@answer="(answer) => answerQuestion(message, item.question, answer)"
+				/>
+				<ChartCard v-else-if="item.kind === 'chart'" :chart="item.chart" />
+				<ActivityGroup
+					v-else
+					:parts="item.parts"
+					:sealed="i < items.length - 1"
+					:live="message.pending"
+				/>
+			</template>
 
-		<WorkingIndicator v-if="showWorking" />
-		<FeedbackBar v-if="showFeedback" :message="message" :hovered="hovered" />
+			<WorkingIndicator v-if="showWorking" />
+
+			<div v-if="showElapsed || showFeedback" class="mt-1 flex items-center gap-2">
+				<ElapsedTime v-if="showElapsed" :message="message" />
+				<FeedbackBar v-if="showFeedback" :message="message" :hovered="hovered" />
+			</div>
+		</div>
 	</div>
 </template>

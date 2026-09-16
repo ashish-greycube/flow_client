@@ -331,8 +331,10 @@ async function send(text) {
 			abortController.signal,
 		);
 	} catch (e) {
-		if (e.name === "AbortError") assistant.pending = false;
-		else failMessage(assistant, e);
+		if (e.name === "AbortError") {
+			assistant.pending = false;
+			finalizeTiming(assistant);
+		} else failMessage(assistant, e);
 	} finally {
 		abortController = null;
 		sending.value = false;
@@ -349,6 +351,9 @@ async function resume(answers, pausedMsg) {
 	// (matches how a reload reconstructs it) instead of splitting at each approval.
 	pausedMsg.questions = [];
 	pausedMsg.pending = true;
+	// Excludes the time spent waiting on the user's approval from the message's
+	// total: the clock resumes here rather than counting back from the original send.
+	pausedMsg.startedAt = Date.now();
 	sending.value = true;
 	abortController = new AbortController();
 	requestScroll(true);
@@ -360,8 +365,10 @@ async function resume(answers, pausedMsg) {
 			abortController.signal,
 		);
 	} catch (e) {
-		if (e.name === "AbortError") pausedMsg.pending = false;
-		else failMessage(pausedMsg, e);
+		if (e.name === "AbortError") {
+			pausedMsg.pending = false;
+			finalizeTiming(pausedMsg);
+		} else failMessage(pausedMsg, e);
 	} finally {
 		abortController = null;
 		sending.value = false;
@@ -444,6 +451,7 @@ function handleEvent(event, msg) {
 			break;
 		case "done":
 			msg.pending = false;
+			finalizeTiming(msg);
 			if (event.status === "Paused") {
 				msg.questions = prepareQuestions(event.questions);
 				msg.runName = runName.value;
@@ -506,6 +514,12 @@ function pushAssistant(pending = true) {
 		runName: null,
 		feedback: null,
 		agentSwitch: null,
+		// Timing: startedAt is the clock for the current active stretch (null once
+		// finalized), elapsedMs accumulates completed stretches — a paused (awaiting
+		// approval) turn resumes the clock instead of counting the wait. Left null for
+		// messages rebuilt from history, where no live timing exists.
+		startedAt: pending ? Date.now() : null,
+		elapsedMs: null,
 	};
 	messages.value.push(msg);
 	// Return the reactive proxy, not the raw object — streaming mutates this after
@@ -524,6 +538,15 @@ function appendText(msg, delta) {
 function failMessage(msg, error) {
 	appendText(msg, `\n\n${__("Error")}: ${error.message}`);
 	msg.pending = false;
+	finalizeTiming(msg);
+}
+
+// Folds the current active stretch (since startedAt) into elapsedMs and clears
+// startedAt, so a finished/aborted/failed message stops advancing its timer.
+function finalizeTiming(msg) {
+	if (msg.startedAt == null) return;
+	msg.elapsedMs = (msg.elapsedMs || 0) + (Date.now() - msg.startedAt);
+	msg.startedAt = null;
 }
 
 function parseToolCalls(raw) {
