@@ -1,0 +1,56 @@
+{
+ "actions": [],
+ "creation": "2026-09-11 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "extraction_model",
+  "column_break_limits",
+  "max_file_size_mb"
+ ],
+ "fields": [
+  {
+   "description": "Flow Model used for structuring extracted text into JSON and for field-mapping. If it supports vision, it is also used as a last-resort OCR fallback for scans local OCR can't read.",
+   "fieldname": "extraction_model",
+   "fieldtype": "Link",
+   "label": "Extraction Model",
+   "options": "Flow Model",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_limits",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "25",
+   "description": "Files larger than this are rejected before any parsing is attempted.",
+   "fieldname": "max_file_size_mb",
+   "fieldtype": "Int",
+   "label": "Max File Size (MB)",
+   "non_negative": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-09-11 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Flow",
+ "name": "Flow File2ERP Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

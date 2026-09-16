@@ -5,8 +5,10 @@
 
 from __future__ import annotations
 
+import csv
 import os
 import re
+import zipfile
 from dataclasses import dataclass
 from io import BytesIO
 
@@ -15,9 +17,10 @@ from frappe import _
 
 TEXT_EXTENSIONS = {"txt", "text", "md", "markdown", "csv", "tsv", "log", "rst", "json", "yaml", "yml"}
 IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "bmp", "tiff", "tif", "gif"}
-FILE_EXTENSIONS = {"pdf", "xlsx", "docx", "doc", "html", "htm"} | TEXT_EXTENSIONS | IMAGE_EXTENSIONS
+FILE_EXTENSIONS = {"pdf", "xls", "xlsx", "docx", "doc", "pptx", "html", "htm"} | TEXT_EXTENSIONS | IMAGE_EXTENSIONS
 
 OCR_DPI = 200
+MAX_CSV_TABLE_ROWS = 2000
 
 CHILD_FIELDTYPES = {"Table", "Table MultiSelect"}
 HTML_FIELDTYPES = {"Text Editor"}
@@ -56,10 +59,18 @@ def _extract_file_source(source) -> list[ExtractedDoc]:
 	return _single(extract_file(file_doc))
 
 
-def extract_file(file_doc) -> str:
-	"""Extract plain text from a File doc by extension. Usable by any caller that holds a File doc."""
+def extract_file(file_doc, *, vision_model: str | None = None) -> str:
+	"""Extract plain text from a File doc by extension. Usable by any caller that holds a File doc.
+
+	`vision_model` is an optional Flow Model name: when local OCR finds nothing on an image
+	or scanned PDF page and the model supports vision, it's asked to transcribe the page
+	directly rather than returning empty text. Callers that don't pass it get today's
+	behaviour unchanged (local OCR only)."""
 	extension = os.path.splitext(file_doc.file_name or file_doc.file_url or "")[1].lower().lstrip(".")
-	return _extract_by_extension(file_doc.get_content(), extension).strip()
+	content = file_doc.get_content()
+	if extension not in FILE_EXTENSIONS:
+		extension = _sniff_extension(content) or extension
+	return _extract_by_extension(content, extension, vision_model=vision_model).strip()
 
 
 def _extract_url_source(source) -> list[ExtractedDoc]:
@@ -124,37 +135,41 @@ def _extract_doctype_source(source) -> list[ExtractedDoc]:
 # --- format extractors -------------------------------------------------------
 
 
-def _extract_by_extension(content, extension: str) -> str:
+def _extract_by_extension(content, extension: str, vision_model: str | None = None) -> str:
 	if extension == "pdf":
-		return _extract_pdf(_as_bytes(content))
-	if extension == "xlsx":
+		return _extract_pdf(_as_bytes(content), vision_model=vision_model)
+	if extension in ("xlsx", "xls"):
 		return _extract_xlsx(_as_bytes(content))
 	if extension == "docx":
 		return _extract_docx(_as_bytes(content))
 	if extension == "doc":
 		return _extract_doc(_as_bytes(content))
+	if extension == "pptx":
+		return _extract_pptx(_as_bytes(content))
+	if extension in ("csv", "tsv"):
+		return _extract_csv(_as_text(content), delimiter="," if extension == "csv" else "\t")
 	if extension in ("html", "htm"):
 		return _extract_html(_as_text(content))
 	if extension in IMAGE_EXTENSIONS:
-		return _ocr_image(_as_bytes(content))
+		return _ocr_image(_as_bytes(content), vision_model=vision_model)
 	if extension in TEXT_EXTENSIONS:
 		return _as_text(content)
 	frappe.throw(_("Unsupported file format: .{0}").format(extension or "?"), title=_("Unsupported Format"))
 
 
-def _extract_pdf(data: bytes) -> str:
+def _extract_pdf(data: bytes, vision_model: str | None = None) -> str:
 	import pdfplumber
 	from pdfminer.pdfdocument import PDFPasswordIncorrect
 
 	try:
 		with pdfplumber.open(BytesIO(data)) as pdf:
-			pages = [_extract_pdf_page(page) for page in pdf.pages]
+			pages = [_extract_pdf_page(page, vision_model=vision_model) for page in pdf.pages]
 	except PDFPasswordIncorrect:
 		frappe.throw(_("PDF is password protected and cannot be read."), title=_("Cannot Read PDF"))
 	return "\n\n".join(page for page in pages if page)
 
 
-def _extract_pdf_page(page) -> str:
+def _extract_pdf_page(page, vision_model: str | None = None) -> str:
 	parts = []
 
 	tables = page.find_tables()
@@ -174,10 +189,10 @@ def _extract_pdf_page(page) -> str:
 	# individually (logos, stamps, embedded scans). Duplicated text on searchable PDFs
 	# is acceptable; missing text is not.
 	if page.images and not parts:
-		parts.append(_ocr_image(_render_page_png(page)))
+		parts.append(_ocr_image(_render_page_png(page), vision_model=vision_model))
 	elif page.images:
 		for image in page.images:
-			text = _ocr_region(page, image)
+			text = _ocr_region(page, image, vision_model=vision_model)
 			if text:
 				parts.append(text)
 
@@ -197,7 +212,7 @@ def _table_to_markdown(table) -> str:
 	return "\n".join(lines)
 
 
-def _ocr_region(page, image) -> str:
+def _ocr_region(page, image, vision_model: str | None = None) -> str:
 	bbox = (
 		max(image["x0"], page.bbox[0]),
 		max(image["top"], page.bbox[1]),
@@ -206,7 +221,7 @@ def _ocr_region(page, image) -> str:
 	)
 	if bbox[2] <= bbox[0] or bbox[3] <= bbox[1]:
 		return ""
-	return _ocr_image(_render_page_png(page.crop(bbox)))
+	return _ocr_image(_render_page_png(page.crop(bbox)), vision_model=vision_model)
 
 
 def _render_page_png(page) -> bytes:
@@ -228,11 +243,46 @@ def _ocr_engine():
 	return _ocr_engine_instance
 
 
-def _ocr_image(data: bytes) -> str:
+def _ocr_image(data: bytes, vision_model: str | None = None) -> str:
 	result = _ocr_engine()(data)
-	if not result.txts:
+	text = "\n".join(result.txts) if result.txts else ""
+	if text or not vision_model:
+		return text
+
+	from flow.lib.model import supports_vision
+
+	if not supports_vision(vision_model):
+		return text
+	return _vision_ocr(data, vision_model)
+
+
+def _vision_ocr(data: bytes, vision_model: str) -> str:
+	"""Last-resort OCR for a page/region local OCR couldn't read: ask a vision-capable
+	model to transcribe it directly. Only called when RapidOCR returned nothing — never
+	replaces local OCR, and never raises (a misconfigured fallback shouldn't fail extraction)."""
+	import base64
+
+	from flow.lib.model import Model
+
+	encoded = base64.b64encode(data).decode("ascii")
+	messages = [
+		{
+			"role": "user",
+			"content": [
+				{
+					"type": "text",
+					"text": "Transcribe all text visible in this image exactly as it appears, "
+					"including any tables as Markdown tables. Reply with the transcription only.",
+				},
+				{"type": "image_url", "image_url": {"url": f"data:image/png;base64,{encoded}"}},
+			],
+		}
+	]
+	try:
+		response = Model(vision_model).chat(messages)
+	except Exception:
 		return ""
-	return "\n".join(result.txts)
+	return (response.content or "").strip()
 
 
 def _extract_xlsx(data: bytes) -> str:
@@ -256,10 +306,53 @@ def _extract_xlsx(data: bytes) -> str:
 
 def _extract_docx(data: bytes) -> str:
 	from docx import Document
+	from docx.table import Table
+	from docx.text.paragraph import Paragraph
 
 	document = Document(BytesIO(data))
-	paragraphs = [p.text.strip() for p in document.paragraphs]
-	return "\n\n".join(p for p in paragraphs if p)
+	parts = []
+	for block in document.iter_inner_content():
+		if isinstance(block, Paragraph):
+			text = block.text.strip()
+			if text:
+				parts.append(text)
+		elif isinstance(block, Table):
+			markdown = _table_to_markdown([[cell.text for cell in row.cells] for row in block.rows])
+			if markdown:
+				parts.append(markdown)
+	return "\n\n".join(parts)
+
+
+def _extract_csv(text: str, delimiter: str) -> str:
+	"""Structure CSV/TSV as a Markdown table so line items read like any other tabular
+	extraction. Falls back to the raw text for very large files — building a markdown
+	table for thousands of rows would blow up the token budget for no benefit."""
+	rows = list(csv.reader(text.splitlines(), delimiter=delimiter))
+	if not rows or len(rows) > MAX_CSV_TABLE_ROWS:
+		return text
+	return _table_to_markdown(rows) or text
+
+
+def _extract_pptx(data: bytes) -> str:
+	from pptx import Presentation
+
+	presentation = Presentation(BytesIO(data))
+	slides = []
+	for index, slide in enumerate(presentation.slides, start=1):
+		parts = []
+		for shape in slide.shapes:
+			if shape.has_text_frame:
+				text = "\n".join(p.text for p in shape.text_frame.paragraphs if p.text.strip())
+				if text:
+					parts.append(text)
+			elif shape.has_table:
+				rows = [[cell.text for cell in row.cells] for row in shape.table.rows]
+				markdown = _table_to_markdown(rows)
+				if markdown:
+					parts.append(markdown)
+		if parts:
+			slides.append("# Slide {0}\n{1}".format(index, "\n\n".join(parts)))
+	return "\n\n".join(slides)
 
 
 def _extract_doc(data: bytes) -> str:
@@ -271,7 +364,9 @@ def _extract_doc(data: bytes) -> str:
 	rather than feeding the model garbage."""
 	import olefile
 
-	if not olefile.isOleFile(data):
+	# `data=` (not the positional/deprecated bytes form) is required — olefile treats a
+	# bytes argument shorter than 1536 bytes as a filename to open, not file content.
+	if not olefile.isOleFile(data=data):
 		frappe.throw(_("File is not a valid .doc document."), title=_("Cannot Read Document"))
 
 	with olefile.OleFileIO(BytesIO(data)) as ole:
@@ -308,6 +403,53 @@ def _extract_html(markup: str) -> str:
 
 def _single(text: str) -> list[ExtractedDoc]:
 	return [ExtractedDoc(text=text)] if text else []
+
+
+def _sniff_extension(content) -> str | None:
+	"""Best-effort magic-byte detection for a file with a missing or wrong extension.
+	Only ever returns a format `_extract_by_extension` already knows how to handle —
+	never guesses into an unsupported one."""
+	if not isinstance(content, (bytes, bytearray)):
+		return "txt"
+
+	signatures = (
+		(b"%PDF", "pdf"),
+		(b"\x89PNG\r\n\x1a\n", "png"),
+		(b"\xff\xd8\xff", "jpg"),
+		(b"GIF87a", "gif"),
+		(b"GIF89a", "gif"),
+		(b"BM", "bmp"),
+		(b"II*\x00", "tiff"),
+		(b"MM\x00*", "tiff"),
+	)
+	for magic, extension in signatures:
+		if content.startswith(magic):
+			return extension
+
+	import olefile
+
+	if olefile.isOleFile(data=content):
+		return "doc"
+
+	if content[:4] == b"PK\x03\x04":
+		try:
+			with zipfile.ZipFile(BytesIO(content)) as archive:
+				names = archive.namelist()
+		except zipfile.BadZipFile:
+			return None
+		if any(name.startswith("word/") for name in names):
+			return "docx"
+		if any(name.startswith("xl/") for name in names):
+			return "xlsx"
+		if any(name.startswith("ppt/") for name in names):
+			return "pptx"
+		return None
+
+	try:
+		content.decode("utf-8")
+		return "txt"
+	except UnicodeDecodeError:
+		return None
 
 
 def _as_bytes(content) -> bytes:

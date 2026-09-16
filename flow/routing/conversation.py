@@ -70,12 +70,15 @@ def get_chat(name: str) -> dict[str, Any]:
 	sessions = _conversation_sessions(conversation.name)
 	messages: list[dict[str, Any]] = []
 	attachments: list[dict[str, Any]] = []
+	run_names: set[str] = set()
 	for session in sessions:
 		for row in session.messages:
 			item = row.as_dict()
 			item["agent"] = session.agent
 			item["agent_session"] = session.name
 			messages.append(item)
+			if row.run:
+				run_names.add(row.run)
 		for row in session.attachments:
 			item = row.as_dict()
 			item["agent_session"] = session.name
@@ -89,7 +92,22 @@ def get_chat(name: str) -> dict[str, Any]:
 		"agent_session": active.name,
 		"messages": messages,
 		"attachments": attachments,
+		"run_errors": _failed_run_errors(run_names),
 	}
+
+
+def _failed_run_errors(run_names: set[str]) -> dict[str, str]:
+	"""Map run name -> its stored error, for runs that failed. A turn whose stream died
+	mid-flight leaves no assistant reply in the transcript; this lets the client show the
+	real reason instead of a generic "interrupted" placeholder."""
+	if not run_names:
+		return {}
+	rows = frappe.get_all(
+		"Flow Run",
+		filters={"name": ["in", list(run_names)], "status": "Failed"},
+		fields=["name", "error"],
+	)
+	return {row.name: row.error for row in rows if row.error}
 
 
 def chat_history(query: str | None = None) -> list[dict[str, Any]]:

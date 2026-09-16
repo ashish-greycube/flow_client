@@ -127,6 +127,15 @@ function loadToolApproval(agent) {
 	return cached ? Promise.resolve() : refresh;
 }
 
+// Drop the cached classification for `agent` and reload it — called after the Tool
+// Permissions dialog saves an override, so the chat panel's approval/inline
+// classification doesn't keep reflecting whatever was cached before the edit.
+function refreshToolApproval(agent) {
+	if (!agent) return Promise.resolve();
+	delete toolApprovalCache[agent];
+	return loadToolApproval(agent);
+}
+
 // ── selection ────────────────────────────────────────────────────────────────
 function setAgent(name) {
 	if (locked.value) return;
@@ -239,6 +248,7 @@ async function switchSession(name) {
 				id: nextId(),
 				role: "user",
 				content: m.content,
+				run: m.run,
 				attachments: attachmentsByRun[m.run] || [],
 			});
 		} else if (m.role === "assistant") {
@@ -259,11 +269,16 @@ async function switchSession(name) {
 
 	// A turn whose stream died before persisting a reply leaves a user message with
 	// no assistant message after it; flag it so the UI notes the interruption rather
-	// than showing a bare, unanswered bubble.
+	// than showing a bare, unanswered bubble — with the real Flow Run error when the
+	// server captured one, falling back to a generic note only when it didn't (e.g. a
+	// genuine client disconnect that never reached the server at all).
 	const built = messages.value;
+	const runErrors = doc.run_errors || {};
 	for (let i = 0; i < built.length; i++) {
-		if (built[i].role === "user" && built[i + 1]?.role !== "assistant")
+		if (built[i].role === "user" && built[i + 1]?.role !== "assistant") {
 			built[i].interrupted = true;
+			built[i].interruptedError = runErrors[built[i].run] || null;
+		}
 	}
 
 	await restoreFeedback(name, seq);
@@ -460,7 +475,7 @@ function handleEvent(event, msg) {
 			refreshHistory();
 			break;
 		case "error":
-			appendText(msg, `\n\n${__("Error")}: ${event.message}`);
+			msg.parts.push(makeErrorPart(event.message));
 			msg.pending = false;
 			break;
 	}
@@ -470,6 +485,10 @@ function handleEvent(event, msg) {
 // Single source of the part shapes, shared by the live stream and the session
 // reload so the two paths can't drift apart.
 const makeTextPart = (text) => ({ id: nextId(), type: "text", text });
+// Its own part type (not appended into the surrounding prose as plain text) so the UI
+// can render it distinctly — a red error box, not text indistinguishable from the
+// model's own reply.
+const makeErrorPart = (message) => ({ id: nextId(), type: "error", message });
 const makeToolPart = (id, name, args) => ({
 	id,
 	type: "tool",
@@ -536,7 +555,7 @@ function appendText(msg, delta) {
 }
 
 function failMessage(msg, error) {
-	appendText(msg, `\n\n${__("Error")}: ${error.message}`);
+	msg.parts.push(makeErrorPart(error.message));
 	msg.pending = false;
 	finalizeTiming(msg);
 }
@@ -605,6 +624,7 @@ export function useStore() {
 		refreshHistory,
 		setAgent,
 		setModel,
+		refreshToolApproval,
 		newChat,
 		switchSession,
 		deleteChat,

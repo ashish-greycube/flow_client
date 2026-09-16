@@ -1,7 +1,7 @@
 {
  "app": "flow",
  "charts": [],
- "content": "[{\"id\":\"flowHeader1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Flow.ai</b></span>\",\"col\":12}},{\"id\":\"scChat00001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow.ai Chat\",\"col\":3}},{\"id\":\"scAgent0001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow.ai Agent\",\"col\":3}},{\"id\":\"scMacro0001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow.ai Macro\",\"col\":3}},{\"id\":\"scSession01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow.ai Session\",\"col\":3}},{\"id\":\"scKnow00001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow.ai Knowledge Base\",\"col\":3}},{\"id\":\"flowManage1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Manage</b></span>\",\"col\":12}},{\"id\":\"cardConfig1\",\"type\":\"card\",\"data\":{\"card_name\":\"Configuration\",\"col\":3}},{\"id\":\"cardAgents1\",\"type\":\"card\",\"data\":{\"card_name\":\"Agents\",\"col\":3}},{\"id\":\"cardConvo01\",\"type\":\"card\",\"data\":{\"card_name\":\"Conversations\",\"col\":3}},{\"id\":\"cardKnow001\",\"type\":\"card\",\"data\":{\"card_name\":\"Knowledge\",\"col\":3}}]",
+ "content": "[{\"id\":\"flowHeader1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Flow.ai</b></span>\",\"col\":12}},{\"id\":\"scChat00001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow.ai Chat\",\"col\":3}},{\"id\":\"scAgent0001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow.ai Agent\",\"col\":3}},{\"id\":\"scMacro0001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow.ai Macro\",\"col\":3}},{\"id\":\"scSession01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow.ai Session\",\"col\":3}},{\"id\":\"scKnow00001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow.ai Knowledge Base\",\"col\":3}},{\"id\":\"fIHd782A1j\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Flow.ai File2ERP\",\"col\":3}},{\"id\":\"flowManage1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Manage</b></span>\",\"col\":12}},{\"id\":\"cardConfig1\",\"type\":\"card\",\"data\":{\"card_name\":\"Configuration\",\"col\":3}},{\"id\":\"cardAgents1\",\"type\":\"card\",\"data\":{\"card_name\":\"Agents\",\"col\":3}},{\"id\":\"cardConvo01\",\"type\":\"card\",\"data\":{\"card_name\":\"Conversations\",\"col\":3}},{\"id\":\"cardKnow001\",\"type\":\"card\",\"data\":{\"card_name\":\"Knowledge\",\"col\":3}},{\"id\":\"qSQnzwsmdJ\",\"type\":\"card\",\"data\":{\"card_name\":\"File2ERP\",\"col\":4}}]",
  "creation": "2026-09-07 15:00:07.917291",
  "custom_blocks": [],
  "docstatus": 0,
@@ -136,7 +136,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Configuration",
-   "link_count": 3,
+   "link_count": 4,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -170,9 +170,48 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Flow.ai File2ERP Settings",
+   "link_count": 0,
+   "link_to": "Flow File2ERP Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "File2ERP",
+   "link_count": 2,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Flow.ai File2ERP Settings",
+   "link_count": 0,
+   "link_to": "Flow File2ERP Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Flow.ai File2ERP",
+   "link_count": 0,
+   "link_to": "Flow File2ERP",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-09-09 13:25:19.435669",
+ "modified": "2026-09-16 10:23:19.532040",
  "modified_by": "Administrator",
  "module": "Flow",
  "name": "Flow",
@@ -192,6 +231,22 @@
    "type": "Page"
   },
   {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Flow.ai Knowledge Base",
+   "link_to": "Flow Knowledge Base",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Flow.ai File2ERP",
+   "link_to": "Flow File2ERP",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
    "color": "Blue",
    "doc_view": "List",
    "label": "Flow.ai Agent",
@@ -204,14 +259,6 @@
    "doc_view": "List",
    "label": "Flow.ai Macro",
    "link_to": "Flow Macro",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Green",
-   "doc_view": "List",
-   "label": "Flow.ai Knowledge Base",
-   "link_to": "Flow Knowledge Base",
    "stats_filter": "[]",
    "type": "DocType"
   },

@@ -16,7 +16,7 @@ from flow.lib.tool import Tool
 if TYPE_CHECKING:
 	from flow.knowledge import Knowledge
 
-DEFAULT_MAX_ITERATIONS = 20
+DEFAULT_MAX_ITERATIONS = 40
 ERROR_MESSAGE_LIMIT = 500
 VALID_ROLES = frozenset({"system", "user", "assistant", "tool"})
 

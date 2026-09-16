@@ -77,6 +77,26 @@ def stage_attachment(file: str) -> dict[str, Any]:
 	return {"file": data["file"], "file_name": data["file_name"], "file_size": data["file_size"]}
 
 
+def stage_extracted(file: str, text: str) -> dict[str, Any]:
+	"""Like stage_attachment, but skips re-extraction — the caller (Flow File2ERP) already
+	has the text, reviewed and possibly corrected by the user. Used by
+	flow.api.file2erp.open_chat_session so opening a file's chat never re-parses/re-OCRs it."""
+	file_doc = frappe.get_doc("File", file)
+	if not frappe.has_permission("File", "read", doc=file_doc):
+		frappe.throw(_("Not permitted to use this file."), frappe.PermissionError)
+	if not text:
+		frappe.throw(_("No readable text found in this file."), title=_("Empty File"))
+
+	data: dict[str, Any] = {
+		"file": file_doc.name,
+		"file_name": file_doc.file_name,
+		"file_size": file_doc.file_size,
+		"extracted_text": text,
+	}
+	frappe.cache.set_value(_cache_key(file), data, expires_in_sec=CACHE_TTL)
+	return {"file": data["file"], "file_name": data["file_name"], "file_size": data["file_size"]}
+
+
 def staged_attachment(file: str) -> dict[str, Any] | None:
 	"""Read the extraction staged at upload time. None if it has expired."""
 	return frappe.cache.get_value(_cache_key(file))

@@ -4,6 +4,9 @@ import PanelDropdown from "@/components/PanelDropdown.vue";
 import { Button, Badge, FeatherIcon, Spinner } from "@/lib/ui";
 import { __ } from "@/lib/translate";
 import { getAgentToolPermissions, setAgentToolPermissions } from "@/api/client";
+import { useStore } from "@/store";
+
+const { refreshToolApproval } = useStore();
 
 // A plain fixed-overlay modal — never teleported — so it stays inside #flow-root
 // and picks up the page's scoped styles, the same reason PanelDropdown.vue exists
@@ -76,6 +79,7 @@ async function setOne(row, value) {
 	row.permission = value;
 	try {
 		await setAgentToolPermissions(props.agent, { [row.tool]: value });
+		refreshToolApproval(props.agent);
 	} catch (e) {
 		row.permission = previous;
 		frappe.show_alert({ message: e.message || __("Could not save permission."), indicator: "red" });
@@ -91,6 +95,7 @@ async function setGroup(targets, value) {
 			props.agent,
 			Object.fromEntries(targets.map((r) => [r.tool, value]))
 		);
+		refreshToolApproval(props.agent);
 	} catch (e) {
 		targets.forEach((r, i) => (r.permission = previous[i]));
 		frappe.show_alert({ message: e.message || __("Could not save permissions."), indicator: "red" });

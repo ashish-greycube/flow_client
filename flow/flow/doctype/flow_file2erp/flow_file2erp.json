@@ -1,0 +1,255 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-09-11 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "file",
+  "column_break_meta",
+  "status",
+  "file_name",
+  "file_size",
+  "file_type",
+  "document_type",
+  "confidence",
+  "section_break_usage",
+  "input_tokens",
+  "column_break_usage_1",
+  "output_tokens",
+  "column_break_usage_2",
+  "total_tokens",
+  "section_break_extraction",
+  "raw_text",
+  "extracted_line_items",
+  "field_mapping",
+  "column_break_iiyw",
+  "ai_input",
+  "extracted_fields",
+  "section_break_output",
+  "created_document_type",
+  "created_document",
+  "conversation",
+  "section_break_error",
+  "error"
+ ],
+ "fields": [
+  {
+   "description": "The uploaded File this entry was extracted from.",
+   "fieldname": "file",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "File",
+   "options": "File",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_meta",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Uploaded",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Uploaded\nProcessing\nExtracted\nNeeds Review\nFailed\nDocument Created",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "file_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "File Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "file_size",
+   "fieldtype": "Int",
+   "label": "File Size",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "description": "Coarse category derived from the file extension.",
+   "fieldname": "file_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "File Type",
+   "options": "PDF\nImage\nExcel\nWord\nCSV\nText\nPowerPoint\nOther",
+   "read_only": 1
+  },
+  {
+   "default": "Expense Claim",
+   "description": "The DocType to extract and create this file as. Chosen by the user before extraction starts \u2014 extraction is scoped to this DocType's own fields.",
+   "fieldname": "document_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Document Type",
+   "options": "Expense Claim\nSales Invoice\nPurchase Invoice\nPurchase Order\nSales Order\nPayment Entry",
+   "reqd": 1
+  },
+  {
+   "description": "Structuring confidence from 0 to 100.",
+   "fieldname": "confidence",
+   "fieldtype": "Percent",
+   "label": "Confidence",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_extraction",
+   "fieldtype": "Section Break",
+   "label": "Extraction"
+  },
+  {
+   "description": "Plain text extracted locally (OCR/parsers) before any LLM call.",
+   "fieldname": "raw_text",
+   "fieldtype": "Long Text",
+   "label": "Raw Text",
+   "read_only": 1
+  },
+  {
+   "description": "The exact text sent to the AI model for structuring (raw_text, capped/chunked if long). Kept separate from raw_text so it's clear what the model actually saw.",
+   "fieldname": "ai_input",
+   "fieldtype": "Long Text",
+   "label": "Input (to AI)",
+   "read_only": 1
+  },
+  {
+   "description": "Parent-level structured fields, e.g. {\"vendor\": \"...\", \"date\": \"...\", \"total\": \"...\"}. Editable by the user before document creation.",
+   "fieldname": "extracted_fields",
+   "fieldtype": "JSON",
+   "label": "Extracted Fields"
+  },
+  {
+   "description": "Line-item / child-table rows as a flat list of objects. Editable by the user before document creation.",
+   "fieldname": "extracted_line_items",
+   "fieldtype": "JSON",
+   "label": "Extracted Line Items"
+  },
+  {
+   "description": "Cached result of the last field-mapping call for a target DocType.",
+   "fieldname": "field_mapping",
+   "fieldtype": "JSON",
+   "hidden": 1,
+   "label": "Field Mapping",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_usage",
+   "fieldtype": "Section Break",
+   "label": "AI Usage"
+  },
+  {
+   "description": "Tokens in the prompt sent to the structuring model.",
+   "fieldname": "input_tokens",
+   "fieldtype": "Int",
+   "label": "Input Tokens",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_usage_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Tokens in the model's response.",
+   "fieldname": "output_tokens",
+   "fieldtype": "Int",
+   "label": "Output Tokens",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_usage_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_tokens",
+   "fieldtype": "Int",
+   "label": "Total Tokens",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_output",
+   "fieldtype": "Section Break",
+   "label": "Created Document"
+  },
+  {
+   "fieldname": "created_document_type",
+   "fieldtype": "Link",
+   "label": "Created Document Type",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_document",
+   "fieldtype": "Dynamic Link",
+   "label": "Created Document",
+   "options": "created_document_type",
+   "read_only": 1
+  },
+  {
+   "description": "Flow Conversation opened for this file, if any.",
+   "fieldname": "conversation",
+   "fieldtype": "Link",
+   "label": "Conversation",
+   "options": "Flow Conversation",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "depends_on": "eval:doc.error",
+   "fieldname": "section_break_error",
+   "fieldtype": "Section Break",
+   "label": "Error"
+  },
+  {
+   "fieldname": "error",
+   "fieldtype": "Long Text",
+   "label": "Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_iiyw",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "links": [],
+ "modified": "2026-09-15 15:47:36.660619",
+ "modified_by": "Administrator",
+ "module": "Flow",
+ "name": "Flow File2ERP",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "if_owner": 1,
+   "read": 1,
+   "role": "Flow User",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

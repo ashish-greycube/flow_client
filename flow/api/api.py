@@ -166,25 +166,40 @@ def stop_run(run_name: str) -> dict[str, str]:
 
 @frappe.whitelist()
 def recover_session(session: str) -> dict[str, int]:
-	"""Fail any Running run on session (re)load. The client that owned the stream is
-	gone, so the run is abandoned; clearing it here unblocks the next turn instead of
-	waiting for the stale-run timeout on the next send."""
+	"""Fail a Running run on session (re)load, but only once it's old enough that the
+	client that owned the stream is actually gone — not on every load unconditionally.
+
+	Age-gated with the same RUNNING_STALE_SECONDS threshold flow_session.py's own
+	_assert_not_blocked() uses when starting a new turn. Without this, reopening the
+	same session in a second tab, or simply reloading the page seconds after sending a
+	message, would fail the run out from under the tab that's still actively streaming
+	it — the stream keeps working for that tab (it doesn't check the DB mid-flight),
+	but every later reload of the session then shows a false "Run abandoned" error for
+	a turn that actually completed fine."""
 	require_flow_user()
 	if not isinstance(session, str) or not session.strip():
 		frappe.throw(_("Session is required."), title=_("Invalid Session"))
 
+	from flow.flow.doctype.flow_session.flow_session import RUNNING_STALE_SECONDS
 	from flow.routing.conversation import resolve_chat
 
 	_conversation, doc = resolve_chat(session.strip())
 
-	abandoned = frappe.get_all("Flow Run", filters={"session": doc.name, "status": "Running"}, pluck="name")
-	for name in abandoned:
+	running = frappe.get_all(
+		"Flow Run", filters={"session": doc.name, "status": "Running"}, fields=["name", "creation"]
+	)
+	now = frappe.utils.now_datetime()
+	recovered = 0
+	for run in running:
+		if frappe.utils.time_diff_in_seconds(now, run.creation) <= RUNNING_STALE_SECONDS:
+			continue
 		frappe.db.set_value(
 			"Flow Run",
-			name,
+			run.name,
 			{"status": "Failed", "error": "Run abandoned: stream ended without completing."},
 		)
-	return {"recovered": len(abandoned)}
+		recovered += 1
+	return {"recovered": recovered}
 
 
 FEEDBACK_COMMENT_LIMIT = 500
@@ -234,7 +249,13 @@ def submit_feedback(run_name: str, rating: str, comment: str | None = None) -> d
 @frappe.whitelist()
 def get_agent_tools(agent: str) -> dict[str, bool]:
 	"""Map an agent's tool slugs to whether each needs confirmation, so the panel can
-	classify tool calls (approval vs. inline)"""
+	classify tool calls (approval vs. inline). Applies each row's per-agent permission
+	override the same way the resolver does when actually running the agent (Always
+	Allow / Needs Approval win over the tool's own default; Blocked tools never run,
+	so they're left out entirely) — otherwise this map drifts from what execution
+	actually does and the UI misclassifies calls the backend already auto-approved."""
+	from flow.flow.doctype.flow_agent.flow_agent import _confirmation_override
+
 	require_flow_user()
 	if not isinstance(agent, str) or not agent.strip():
 		return {}
@@ -242,13 +263,18 @@ def get_agent_tools(agent: str) -> dict[str, bool]:
 	doc = frappe.get_doc("Flow Agent", agent.strip())
 	frappe.has_permission("Flow Agent", "read", doc.name, throw=True)
 
-	tool_names = [row.tool for row in doc.tools]
+	tool_names = [row.tool for row in doc.tools if row.permission != "Blocked"]
 	if not tool_names:
 		return {}
+	permission_by_tool = {row.tool: row.permission for row in doc.tools}
 	rows = frappe.get_all(
-		"Flow Tool", filters={"name": ["in", tool_names]}, fields=["slug", "requires_confirmation"]
+		"Flow Tool", filters={"name": ["in", tool_names]}, fields=["name", "slug", "requires_confirmation"]
 	)
-	return {row.slug: bool(row.requires_confirmation) for row in rows}
+	result = {}
+	for row in rows:
+		override = _confirmation_override(permission_by_tool.get(row.name))
+		result[row.slug] = bool(row.requires_confirmation) if override is None else override
+	return result
 
 
 @frappe.whitelist()

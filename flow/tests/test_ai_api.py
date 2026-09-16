@@ -209,6 +209,75 @@ class TestStartRun(IntegrationTestCase):
 		self.assertEqual(run.status, "Failed")
 
 
+class TestAgentToolPermissionOverride(IntegrationTestCase):
+	"""The Tool Permissions board's per-agent override (Always Allow / Needs Approval /
+	Blocked) must actually change what `start_run` does, and `get_agent_tools` (the
+	classification map the chat panel uses to render approval vs. inline tool calls)
+	must agree with it — otherwise the UI can show a call as needing approval that the
+	backend already auto-ran, or vice versa."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		sync_builtin_tools()
+
+	def setUp(self):
+		self.model = frappe.get_doc(_model_doc()).insert()
+		self.agent = frappe.get_doc(_agent_doc(self.model.name)).insert()
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def _set_permission(self, tool: str, permission: str):
+		row = next(r for r in self.agent.tools if r.tool == tool)
+		row.permission = permission
+		self.agent.save()
+
+	def test_always_allow_override_skips_confirmation(self):
+		from flow.api.api import get_agent_tools
+
+		self._set_permission("execute", "Always Allow")
+		self.assertFalse(get_agent_tools(self.agent.name)["execute"])
+
+		with patch.object(Model, "chat", return_value=_confirm_call()):
+			payload = start_run("run it", agent=self.agent.name)
+
+		self.assertEqual(payload["status"], "Completed")
+
+	def test_needs_approval_override_forces_confirmation(self):
+		from flow.api.api import get_agent_tools
+
+		self._set_permission("read", "Needs Approval")
+		self.assertTrue(get_agent_tools(self.agent.name)["read"])
+
+		read_call = ChatResponse(
+			content=None,
+			tool_calls=[ToolCall(id="r1", name="read", arguments={"doctype": "ToDo"})],
+			finish_reason="tool_calls",
+			usage={"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+		)
+		with patch.object(Model, "chat", return_value=read_call):
+			payload = start_run("read it", agent=self.agent.name)
+
+		self.assertEqual(payload["status"], "Paused")
+
+	def test_blocked_tool_left_out_of_approval_map(self):
+		from flow.api.api import get_agent_tools
+
+		self._set_permission("execute", "Blocked")
+		self.assertNotIn("execute", get_agent_tools(self.agent.name))
+
+	def test_get_agent_tools_matches_default_without_override(self):
+		from flow.api.api import get_agent_tools
+
+		# No override saved: the map must fall back to each tool's own default,
+		# same as the resolver does when assembling the agent.
+		result = get_agent_tools(self.agent.name)
+		self.assertTrue(result["execute"])
+		self.assertFalse(result["read"])
+		self.assertFalse(result["describe"])
+
+
 class TestResumeRun(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
@@ -693,14 +762,28 @@ class TestRecoverSession(IntegrationTestCase):
 			.name
 		)
 
-	def test_running_run_is_marked_failed(self):
+	def test_stale_running_run_is_marked_failed(self):
+		from flow.flow.doctype.flow_session.flow_session import RUNNING_STALE_SECONDS
+
 		session = self._session()
 		run = self._run(session, "Running")
+		stale = frappe.utils.add_to_date(frappe.utils.now_datetime(), seconds=-(RUNNING_STALE_SECONDS + 30))
+		frappe.db.set_value("Flow Run", run, "creation", stale, update_modified=False)
 
 		self.assertEqual(recover_session(session), {"recovered": 1})
 		doc = frappe.get_doc("Flow Run", run)
 		self.assertEqual(doc.status, "Failed")
 		self.assertIn("abandoned", doc.error)
+
+	def test_fresh_running_run_is_left_alone(self):
+		# A run still well within RUNNING_STALE_SECONDS may genuinely be streaming to
+		# another tab/window right now — recover_session must not fail it out from
+		# under that tab just because this tab (re)loaded the same session.
+		session = self._session()
+		run = self._run(session, "Running")
+
+		self.assertEqual(recover_session(session), {"recovered": 0})
+		self.assertEqual(frappe.db.get_value("Flow Run", run, "status"), "Running")
 
 	def test_completed_and_paused_runs_untouched(self):
 		session = self._session()

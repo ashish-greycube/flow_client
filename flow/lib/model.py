@@ -139,6 +139,19 @@ class Model:
 				return stop.value
 
 
+def supports_vision(model_id: str) -> bool:
+	"""Whether litellm knows this model to accept image content blocks. Used to gate the
+	vision-OCR fallback so it's only attempted for models that can actually use it."""
+	if model_id.startswith("codex/"):
+		return False
+	try:
+		from litellm import supports_vision as _supports_vision
+
+		return bool(_supports_vision(model=model_id))
+	except Exception:
+		return False
+
+
 def resolve_provider_credentials(model_id: str) -> dict[str, Any]:
 	"""Look up central Flow Provider credentials for a model's provider."""
 	if model_id.startswith("codex/"):

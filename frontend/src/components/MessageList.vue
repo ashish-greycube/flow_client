@@ -3,6 +3,7 @@ import { ref, watch } from "vue";
 import UserMessage from "./UserMessage.vue";
 import AssistantMessage from "./AssistantMessage.vue";
 import EmptyState from "./EmptyState.vue";
+import ToolError from "./ToolError.vue";
 import { FeatherIcon } from "@/lib/ui";
 import { useStore } from "@/store";
 import { __ } from "@/lib/translate";
@@ -54,8 +55,9 @@ watch(scrollTick, () => {
 			<template v-for="msg in messages" :key="msg.id">
 				<template v-if="msg.role === 'user'">
 					<UserMessage :content="msg.content" :attachments="msg.attachments" />
+					<ToolError v-if="msg.interruptedError" :message="msg.interruptedError" />
 					<div
-						v-if="msg.interrupted"
+						v-else-if="msg.interrupted"
 						class="flex items-center gap-1.5 text-[length:var(--text-sm)] text-ink-gray-5"
 					>
 						<FeatherIcon name="alert-circle" class="h-3.5 w-3.5 shrink-0" />

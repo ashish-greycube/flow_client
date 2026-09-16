@@ -11,7 +11,7 @@ from flow.agent_instructions import (
 )
 
 OCR_AGENT_TITLE = "OCR Agent"
-OCR_AGENT_MAX_ITERATIONS = 20
+OCR_AGENT_MAX_ITERATIONS = 40
 OCR_ROUTING_DESCRIPTION = "Read attached files with OCR, detect document types, and prepare ERP records."
 
 OCR_AGENT_INSTRUCTIONS = (
@@ -60,21 +60,38 @@ OCR_AGENT_INSTRUCTIONS = (
 	"then describe(doctype, name=None) before creating or updating anything.\n\n"
 	"STYLE: before each tool call, write one short sentence on what you're doing and why. When "
 	"a value is unreadable or a document is ambiguous, say so plainly and ask rather than "
-	"guessing. When the task is done, reply in plain text."
+	"guessing. When the task is done, reply in plain text.\n\n"
+	"FILE2ERP: for any attached or referenced file, call get_file2erp_data(file) before "
+	"ocr_extract. When found=True, treat its fields/line_items as the authoritative, "
+	"user-corrected source of truth for create/update — a person has already reviewed and "
+	"fixed these values, so do not re-run ocr_extract on that file or second-guess them "
+	"without a clear reason. When found=False, fall back to the file's inlined extracted "
+	"text or ocr_extract as usual."
 	f"\n\n{STRICT_AGENT_VALIDATION_INSTRUCTIONS}\n\n{DOCUMENT_WRITE_VALIDATION_INSTRUCTIONS}"
 )
 
-OCR_AGENT_TOOL_SLUGS = ("find_doctypes", "describe", "ocr_extract", "read", "create", "update", "run_action")
+OCR_AGENT_TOOL_SLUGS = (
+	"find_doctypes",
+	"describe",
+	"ocr_extract",
+	"get_file2erp_data",
+	"read",
+	"create",
+	"update",
+	"run_action",
+)
 
 
 def sync_ocr_agent(model: str | None = None) -> None:
 	"""Ensure the system OCR Agent exists and is up-to-date. Called from after_migrate and
 	FlowModel.after_insert, mirroring flow.assistant.assistant.sync_builtin_assistant."""
 	from flow.tools.builtins import sync_builtin_tools
+	from flow.tools.file2erp import sync_file2erp_tool
 	from flow.tools.ocr import sync_ocr_tool
 
 	sync_builtin_tools()
 	sync_ocr_tool()
+	sync_file2erp_tool()
 
 	model_name = model or frappe.db.get_value("Flow Model", {"enabled": 1}, "name")
 	if not model_name:

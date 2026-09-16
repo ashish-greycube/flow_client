@@ -10,6 +10,8 @@ import TriggerView from "./views/TriggerView.vue";
 import KnowledgeBasesView from "./views/KnowledgeBasesView.vue";
 import KnowledgeBaseFormView from "./views/KnowledgeBaseFormView.vue";
 import KnowledgeSourceFormView from "./views/KnowledgeSourceFormView.vue";
+import File2ERPView from "./views/File2ERPView.vue";
+import File2ERPDetailView from "./views/File2ERPDetailView.vue";
 
 // Frappe treats additional segments after a Page route as route arguments, so
 // the embedded app can use clean, refresh-safe paths under /desk/flow-chat.
@@ -70,6 +72,8 @@ export const router = createRouter({
 			name: "knowledge-source-edit",
 			component: KnowledgeSourceFormView,
 		},
+		{ path: "/file2erp", name: "file2erp", component: File2ERPView },
+		{ path: "/file2erp/:name", name: "file2erp-detail", component: File2ERPDetailView, props: true },
 	],
 });
 
@@ -98,6 +102,8 @@ function toFrappeSegments(route) {
 	if (route.name === "knowledge-source-edit") {
 		return ["flow-chat", "knowledge-bases", route.params.name, "sources", route.params.source];
 	}
+	if (route.name === "file2erp") return ["flow-chat", "file2erp"];
+	if (route.name === "file2erp-detail") return ["flow-chat", "file2erp", route.params.name];
 	return ["flow-chat"];
 }
 
@@ -134,6 +140,10 @@ function toVueLocation(segments) {
 			}
 		}
 		return { name: "knowledge-base-edit", params: { name: sub } };
+	}
+	if (section === "file2erp") {
+		if (!sub) return { name: "file2erp" };
+		return { name: "file2erp-detail", params: { name: sub } };
 	}
 	return { name: "chat" };
 }

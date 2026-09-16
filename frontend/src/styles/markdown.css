@@ -50,8 +50,9 @@
 	margin: 2px 0;
 }
 .md a {
-	color: var(--ink-blue-link, var(--blue-600));
-	text-decoration: none;
+	color: darkorchid;
+	text-decoration: underline;
+	font-weight: 700;
 }
 .md a:hover {
 	text-decoration: underline;
