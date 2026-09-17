@@ -13,6 +13,7 @@ from flow.agent_instructions import (
 	DOCUMENT_WRITE_VALIDATION_INSTRUCTIONS,
 	SALES_INVOICE_CREATION_INSTRUCTIONS,
 	STRICT_AGENT_VALIDATION_INSTRUCTIONS,
+	TABLE_COMPARISON_OUTPUT_INSTRUCTIONS,
 )
 
 SOURCE_LABEL = "Jarvis description-based Flow adaptation"
@@ -149,4 +150,6 @@ def _instruction_profile(profile: str | None) -> str:
 		return ""
 	if profile == "create-sales-invoice":
 		return f"\nSALES INVOICE CREATION RULES\n{SALES_INVOICE_CREATION_INSTRUCTIONS}"
+	if profile == "table-comparison-output":
+		return f"\n{TABLE_COMPARISON_OUTPUT_INSTRUCTIONS}"
 	raise ValueError(f"Unknown prebuilt agent instruction profile: {profile}")

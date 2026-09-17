@@ -28,20 +28,30 @@ const summary = computed(() => {
 	return toolLabel(props.parts[props.parts.length - 1].name);
 });
 
-// A single tool call whose result is an error payload.
+// A single tool call whose result is an error payload — used for the
+// expanded single-step view (ToolError below the args).
 const error = computed(() => (single.value ? toolError(props.parts[0].result) : null));
+
+// Every failed call in the group, single or merged. A step that failed while
+// running doesn't stop later steps from being appended to the same collapsed
+// group once sealed — checking only `error` (single-part-only) would lose the
+// failure the moment a second step joins the group, which is what made the
+// red banner disappear once the run finished instead of staying failed.
+const failedParts = computed(() =>
+	props.parts.map((p) => toolError(p.result)).filter((e) => e !== null)
+);
 
 // Insufficient-permission failures get a louder red treatment (border + icon)
 // instead of the default muted "Failed" text — the fix is usually "ask an
 // admin", so it shouldn't read the same as a step still quietly finishing up.
-const danger = computed(() => Boolean(error.value) && isPermissionError(error.value));
+const danger = computed(() => failedParts.value.some(isPermissionError));
 
 // Only set on a resolved approval or failed line. A permission failure says so
 // directly in the collapsed line — "Insufficient permission" instead of a bare
 // "Failed" — so the reason is visible without expanding the card.
 const status = computed(() => {
 	if (danger.value) return __("Insufficient permission");
-	if (error.value) return __("Failed");
+	if (failedParts.value.length) return __("Failed");
 	const a = single.value ? props.parts[0].approval : null;
 	if (a === "denied") return __("Denied");
 	if (a === "redirected") return __("Changes requested");

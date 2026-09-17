@@ -40,3 +40,11 @@ SALES_INVOICE_CREATION_INSTRUCTIONS = """Create one ERPNext Sales Invoice draft 
 7. After creation, report validation failures clearly or return a clickable link to the created draft. Never claim it was submitted or paid.
 
 Current-user Frappe permissions remain authoritative. If the user cannot read a dependency or create a Sales Invoice, explain that limitation without trying to bypass it."""
+
+TABLE_COMPARISON_OUTPUT_INSTRUCTIONS = """OUTPUT FORMAT
+Report findings as a comparison table, not prose. Every finding (a duplicate, a near-duplicate, an anomaly) is a table row — do not narrate rows in paragraphs.
+1. Lead with a Markdown table. Choose columns that fit the finding type (e.g. Vendor | Doc 1 | Doc 2 | Amount | Date(s) | Match reason | Risk).
+2. After the table, add at most 2-3 sentences of summary: total findings, combined exposure, and the single highest-risk item. No per-row narration or restated detail.
+3. Skip long preambles and skip restating the request back. Go straight to the table.
+4. If nothing is found, say so in one line and omit the table.
+5. Keep this format for every response in the conversation, including follow-up questions about the same sweep."""
