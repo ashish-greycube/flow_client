@@ -4,6 +4,9 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import tempfile
 from typing import Any
 
 import frappe
@@ -101,6 +104,66 @@ def get_file2erp_entry(name: str) -> dict[str, Any]:
 	data = doc.as_dict()
 	data["file_url"] = frappe.db.get_value("File", doc.file, "file_url") if doc.file else None
 	return data
+
+
+OFFICE_PREVIEW_EXTENSIONS = {".doc", ".docx", ".xls", ".xlsx"}
+OFFICE_PREVIEW_CACHE_TTL = 60 * 60
+
+
+@frappe.whitelist()
+def preview_file2erp_file(name: str) -> None:
+	"""Stream a PDF rendering of an Office attachment (.doc/.docx/.xls/.xlsx) for inline preview."""
+	require_flow_user()
+	doc = frappe.get_doc("Flow File2ERP", name)
+	if not frappe.has_permission("Flow File2ERP", "read", doc=doc):
+		frappe.throw(_("Not permitted to view this entry."), frappe.PermissionError)
+	if not doc.file:
+		frappe.throw(_("This entry has no file."), frappe.DoesNotExistError)
+
+	file_doc = frappe.get_doc("File", doc.file)
+	ext = os.path.splitext(file_doc.file_name or "")[1].lower()
+	if ext not in OFFICE_PREVIEW_EXTENSIONS:
+		frappe.throw(_("Preview is not supported for this file type."))
+
+	cache_key = f"flow_file2erp_preview:{file_doc.name}:{file_doc.modified}"
+	pdf = frappe.cache().get_value(cache_key)
+	if not pdf:
+		pdf = _convert_to_pdf(file_doc.get_full_path(), ext)
+		frappe.cache().set_value(cache_key, pdf, expires_in_sec=OFFICE_PREVIEW_CACHE_TTL)
+
+	frappe.local.response.filename = f"{os.path.splitext(file_doc.file_name)[0]}.pdf"
+	frappe.local.response.filecontent = pdf
+	frappe.local.response.type = "pdf"
+
+
+def _convert_to_pdf(path: str, ext: str) -> bytes:
+	with tempfile.TemporaryDirectory() as tmp:
+		# Copy under a known name/extension so LibreOffice picks the right import filter,
+		# and use a throwaway profile dir so concurrent runs don't lock each other.
+		src = os.path.join(tmp, f"source{ext}")
+		with open(path, "rb") as f, open(src, "wb") as out:
+			out.write(f.read())
+		try:
+			subprocess.run(
+				[
+					"soffice",
+					f"-env:UserInstallation=file://{tmp}/profile",
+					"--headless",
+					"--convert-to",
+					"pdf",
+					"--outdir",
+					tmp,
+					src,
+				],
+				check=True,
+				capture_output=True,
+				timeout=90,
+			)
+			with open(os.path.join(tmp, "source.pdf"), "rb") as f:
+				return f.read()
+		except (subprocess.SubprocessError, OSError):
+			frappe.log_error(title="Flow File2ERP preview conversion failed")
+			frappe.throw(_("Could not generate a preview for this file."))
 
 
 @frappe.whitelist()

@@ -308,11 +308,11 @@ async function deleteEntry() {
 			<Spinner class="h-5 w-5 text-ink-gray-5" />
 		</div>
 
-		<div v-else-if="entry" class="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2">
-			<div class="flex min-h-0 flex-col border-b border-outline-gray-1 lg:border-b-0 lg:border-r">
+		<div v-else-if="entry" class="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] lg:grid-cols-[repeat(2,minmax(0,1fr))]">
+			<div class="flex min-h-0 min-w-0 flex-col border-b border-outline-gray-1 lg:border-b-0 lg:border-r">
 				<h2 class="px-6 pt-5 pb-2 text-sm font-medium text-ink-gray-7">{{ __("Preview") }}</h2>
-				<div class="min-h-0 flex-1">
-					<FilePreviewPane :file-url="entry.file_url" :file-name="entry.file_name" />
+				<div class="min-h-0 min-w-0 flex-1">
+					<FilePreviewPane :file-url="entry.file_url" :file-name="entry.file_name" :entry-name="name" />
 				</div>
 			</div>
 
@@ -356,7 +356,13 @@ async function deleteEntry() {
 					</div>
 
 					<div v-if="editable" class="flex justify-end">
-						<Button variant="outline" size="sm" :loading="extracting" @click="startExtractionClick(true)">
+						<Button
+							variant="outline"
+							size="sm"
+							:loading="extracting"
+							:disabled="extracting || awaitingExtraction || PENDING_STATUSES.has(entry.status)"
+							@click="startExtractionClick(true)"
+						>
 							<template #prefix><FeatherIcon name="refresh-cw" class="h-3.5 w-3.5" /></template>
 							{{ __("Re-extract Data") }}
 						</Button>

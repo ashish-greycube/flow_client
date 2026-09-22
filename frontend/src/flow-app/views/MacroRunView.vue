@@ -190,7 +190,7 @@ function formatDate(value) {
 						</div>
 					</dl>
 					<div class="mt-5 flex flex-wrap gap-2">
-						<Button v-if="run.session" variant="subtle" @click="openSession">
+						<Button v-if="run.session" variant="solid" theme="blue" @click="openSession">
 							<template #prefix
 								><FeatherIcon name="message-circle" class="h-3.5 w-3.5"
 							/></template>

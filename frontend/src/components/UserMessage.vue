@@ -36,7 +36,7 @@ const avatarStyle = computed(() =>
 			</div>
 
 			<div
-				class="w-fit max-w-full whitespace-pre-wrap break-words rounded-2xl bg-surface-gray-4 px-3.5 py-2.5 text-[length:var(--text-base)] font-normal leading-relaxed text-ink-gray-9"
+				class="flow-user-bubble w-fit max-w-full cursor-text select-text whitespace-pre-wrap break-words rounded-2xl bg-surface-gray-4 px-3.5 py-2.5 text-[length:var(--text-base)] font-normal leading-relaxed text-ink-gray-9"
 			>
 				{{ content }}
 			</div>

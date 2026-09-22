@@ -154,7 +154,8 @@ function openSession(session) {
 					<Button
 						v-if="run.session"
 						class="mt-4"
-						variant="subtle"
+						variant="solid"
+						theme="blue"
 						@click="openSession(run.session)"
 					>
 						<template #prefix>

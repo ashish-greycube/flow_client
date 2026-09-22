@@ -101,6 +101,12 @@
 	--ink-gray-3: #978e8e;
 }
 
+/* Light mode only: user prompt bubble background (dark keeps surface-gray-4).
+   !important because tailwind.config sets `important: true` on utilities. */
+[data-theme="light"] .flow-user-bubble {
+	background-color: #ccc !important;
+}
+
 /* The GreyCube logo is a dark mark on an opaque white card — invisible (worse,
    a jarring white box) on a dark sidebar. Inverting flips it to a white mark
    on black, which reads correctly against the dark surface. */

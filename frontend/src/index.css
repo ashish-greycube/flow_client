@@ -125,3 +125,21 @@
 .flow-scrollbar::-webkit-scrollbar-track {
 	background: transparent;
 }
+
+/* Always-visible scrollbars (no overlay auto-hide) for the file preview grid. */
+.flow-scrollbar-visible {
+	scrollbar-width: auto;
+	scrollbar-color: var(--surface-gray-5, #b8b8b8) var(--surface-gray-2, #ececec);
+}
+.flow-scrollbar-visible::-webkit-scrollbar {
+	width: 12px;
+	height: 12px;
+}
+.flow-scrollbar-visible::-webkit-scrollbar-thumb {
+	background: var(--surface-gray-5, #b8b8b8);
+	border-radius: 999px;
+	border: 2px solid var(--surface-gray-2, #ececec);
+}
+.flow-scrollbar-visible::-webkit-scrollbar-track {
+	background: var(--surface-gray-2, #ececec);
+}

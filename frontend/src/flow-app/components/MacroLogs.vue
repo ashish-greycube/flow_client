@@ -156,7 +156,7 @@ function openRun(name) {
 							</template>
 							{{ __("View run") }}
 						</Button>
-						<Button v-if="run.session" variant="subtle" @click="openSession(run.session)">
+						<Button v-if="run.session" variant="solid" theme="blue" @click="openSession(run.session)">
 							<template #prefix>
 								<FeatherIcon name="message-circle" class="h-3.5 w-3.5" />
 							</template>
