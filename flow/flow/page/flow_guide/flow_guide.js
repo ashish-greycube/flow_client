@@ -18,20 +18,31 @@ function renderGuide(container) {
 			description: __("Ask a question in normal language. Flow can find permitted information, explain it, and help complete a task."),
 			example: __("Example: Show unpaid sales invoices due this week."),
 			howTo: [
-				__("Open Flow Chat and choose an agent from the selector beside the message box."),
-				__("Type your request with useful details such as the company, date range, or status, then send it."),
-				__("Review the answer and approve or deny any action when Flow asks."),
+				__("Open Flow Chat and select New Chat. Leave the agent selector on Auto, or pick a specific agent and model."),
+				__("Type your request with useful details such as the company, date range, or status. Attach files with the paperclip or by dragging them in."),
+				__("Review the answer and approve or deny any action when Flow asks. Select Stop to end a reply early."),
 			],
 		},
 		{
 			icon: "users",
 			title: __("Specialised Agents"),
-			description: __("Choose an agent for the type of work you need. Each agent has focused instructions and access to selected tools."),
-			example: __("Example: Use the Sales Analysis Agent for sales questions."),
+			description: __("Each agent has focused instructions and selected tools. Flow includes prebuilt agents for areas such as receivables, payables, bank reconciliation, inventory, GST, TDS, and payroll."),
+			example: __("Auditor agents only read and report. Operator agents can also prepare draft documents for you to review."),
 			howTo: [
-				__("Open Agent from the Flow sidebar to see the available featured and custom agents."),
-				__("Create an agent when needed by choosing a model and writing clear instructions for its role and limits."),
-				__("Return to Chat and select that agent before sending your request."),
+				__("Open Agent from the Flow sidebar and use the Featured, Enabled, and Disabled tabs to browse agents."),
+				__("A prebuilt agent is disabled when the apps or DocTypes it needs are not installed on this site."),
+				__("Create your own agent by choosing a model and writing clear instructions for its role and limits."),
+			],
+		},
+		{
+			icon: "refresh",
+			title: __("Automatic Agent Routing"),
+			description: __("With Auto selected, Flow picks the best agent for each message and can switch agents during one conversation. The new agent receives a short summary of the chat so far."),
+			example: __("Example: Ask about overdue invoices, then about stock levels, in the same chat."),
+			howTo: [
+				__("In Chat, set the agent selector to Auto before sending your first message."),
+				__("Write each request normally. When Flow changes agent, the chat shows a \"Switched to\" note with the new agent."),
+				__("To keep one agent for the whole chat, select that agent instead of Auto."),
 			],
 		},
 		{
@@ -100,6 +111,39 @@ function renderGuide(container) {
 				__("When the export finishes, select the download link in Flow's reply."),
 			],
 		},
+		{
+			icon: "file-text",
+			title: __("File2ERP"),
+			description: __("Turn a PDF, image, spreadsheet, or document into a Frappe record. Flow reads the file, and you check the extracted fields and line items before anything is created."),
+			example: __("Example: Create a Purchase Invoice from a supplier's PDF bill."),
+			howTo: [
+				__("Open File2ERP from the Flow sidebar and upload or drag in a file."),
+				__("Choose the document type, select Extract Data, and correct any fields or line items."),
+				__("Select Create to make the document, or Ask AI to continue in a chat."),
+			],
+		},
+		{
+			icon: "thumbs-up",
+			title: __("Feedback and Memory"),
+			description: __("Rate each reply so agents improve. For agents with memory enabled, a thumbs-down with a comment is saved as a lesson for future chats."),
+			example: __("Example: Thumbs down with \"Always group results by customer\"."),
+			howTo: [
+				__("After a reply finishes, select thumbs up or thumbs down below it."),
+				__("With a thumbs down, add a short comment that explains what should change."),
+				__("If Flow shows Saved to agent memory, the agent will use it in later chats."),
+			],
+		},
+		{
+			icon: "clock",
+			title: __("Chat History"),
+			description: __("Your recent chats appear in the Flow sidebar. Chats are deleted automatically 90 days after they start, including their messages and attached files."),
+			example: __("Example: Search the sidebar for \"overdue\" to reopen an earlier chat."),
+			howTo: [
+				__("Use Search chats in the sidebar to find a chat by its title, then select it to continue."),
+				__("Select the delete icon beside a chat to remove it immediately."),
+				__("Save anything you need to keep. Administrators can change the retention period in Log Settings."),
+			],
+		},
 	];
 
 	const page = $("<div>").addClass("flow-guide-app").appendTo(container);
@@ -132,7 +176,7 @@ function renderGuide(container) {
 	const noteCopy = $("<div>").appendTo(note);
 	$("<h3>").text(__("You stay in control")).appendTo(noteCopy);
 	$("<p>")
-		.text(__("Flow uses your Frappe permissions when a tool reads or changes data. A sensitive action can also ask for confirmation before it continues."))
+		.text(__("Flow uses your Frappe permissions when a tool reads or changes data. A sensitive action asks for confirmation before it continues, and agents create documents only as drafts for you to review and submit."))
 		.appendTo(noteCopy);
 
 	renderExamples(shell);
@@ -148,7 +192,7 @@ function renderHeader(page) {
 
 function renderSteps(shell) {
 	const steps = [
-		__("Choose an agent that matches your task."),
+		__("Leave the agent on Auto, or choose one that matches your task."),
 		__("Write what you need in normal language."),
 		__("Review the answer and any requested action."),
 		__("Approve the action when Flow asks for confirmation."),

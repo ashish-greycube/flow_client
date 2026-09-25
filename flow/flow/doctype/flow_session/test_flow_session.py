@@ -94,7 +94,7 @@ class TestClearOldLogs(IntegrationTestCase):
 			{"doctype": "Flow Run", "session": session.name, "source": "Manual", "status": "Completed"}
 		).insert(ignore_permissions=True)
 		old = frappe.utils.add_days(frappe.utils.now(), -age_days)
-		frappe.db.set_value("Flow Session", session.name, "modified", old, update_modified=False)
+		frappe.db.set_value("Flow Session", session.name, "creation", old, update_modified=False)
 		return session.name, run.name, f.name
 
 	def test_old_session_and_linked_run_and_messages_are_purged(self):
@@ -404,7 +404,7 @@ class TestAttachmentCleanup(IntegrationTestCase):
 	def test_clear_old_logs_purges_chunks_for_batch(self):
 		s = frappe.get_doc({"doctype": "Flow Session", "title": "old"}).insert(ignore_permissions=True)
 		old = frappe.utils.add_days(frappe.utils.now(), -100)
-		frappe.db.set_value("Flow Session", s.name, "modified", old, update_modified=False)
+		frappe.db.set_value("Flow Session", s.name, "creation", old, update_modified=False)
 		with patch("flow.knowledge.attachment_store.delete") as delete:
 			FlowSession.clear_old_logs(days=30)
 		batch = delete.call_args.kwargs["session"]

@@ -97,13 +97,13 @@ class FlowSession(Document):
 			)
 
 	@staticmethod
-	def clear_old_logs(days=30):
-		"""Delete sessions idle for `days`, along with their Flow Runs and transcript rows.
-		Age is last activity (modified), so an actively-used session is never purged."""
+	def clear_old_logs(days=90):
+		"""Delete standalone sessions created more than `days` ago, along with their Flow Runs
+		and transcript rows. Sessions inside a conversation are purged with that conversation."""
 		cutoff = frappe.utils.add_days(frappe.utils.now(), -days)
 		sessions = frappe.get_all(
 			"Flow Session",
-			filters={"modified": ["<", cutoff], "conversation": ["is", "not set"]},
+			filters={"creation": ["<", cutoff], "conversation": ["is", "not set"]},
 			pluck="name",
 		)
 		for batch in frappe.utils.create_batch(sessions, 100):

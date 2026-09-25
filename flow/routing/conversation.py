@@ -8,6 +8,7 @@ from typing import Any
 import frappe
 from frappe import _
 
+from flow.flow.doctype.flow_conversation.flow_conversation import chat_retention_cutoff
 from flow.flow.doctype.flow_session.flow_session import derive_title
 from flow.lib.session import _assert_session_owner
 
@@ -111,11 +112,15 @@ def _failed_run_errors(run_names: set[str]) -> dict[str, str]:
 
 
 def chat_history(query: str | None = None) -> list[dict[str, Any]]:
-	conversation_filters: dict[str, Any] = {"owner": frappe.session.user}
+	conversation_filters: dict[str, Any] = {
+		"owner": frappe.session.user,
+		"creation": [">=", chat_retention_cutoff("Flow Conversation")],
+	}
 	legacy_filters: dict[str, Any] = {
 		"owner": frappe.session.user,
 		"source": ["!=", "Trigger"],
 		"conversation": ["is", "not set"],
+		"creation": [">=", chat_retention_cutoff("Flow Session")],
 	}
 	if query:
 		like = ["like", f"%{_escape_like(query)}%"]
