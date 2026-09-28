@@ -29,7 +29,7 @@ body[data-route^="flow-guide"] .layout-main-section {
 }
 
 .flow-guide-page {
-	background: var(--subtle-fg);
+	background: var(--fg-color, var(--card-bg));
 	min-height: 100vh;
 }
 
@@ -75,129 +75,355 @@ body[data-route^="flow-guide"] .layout-main-section {
 	--icon-stroke: currentColor;
 	justify-content: center;
 	min-height: 32px;
-	padding: 6px 12px;
+	padding: 6px 14px;
 	border: 1px solid var(--border-color);
-	border-radius: 7px;
-	background: var(--card-bg);
+	border-radius: 8px;
+	background: var(--btn-default-bg, var(--control-bg));
+	box-shadow: var(--btn-shadow, 0 1px 2px rgba(0, 0, 0, 0.06));
 	color: var(--text-color);
 	font-size: var(--text-sm);
-	font-weight: 500;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
 }
 
 .flow-guide-button:hover {
-	background: var(--control-bg);
+	background: var(--btn-default-hover-bg, var(--border-color));
 	text-decoration: none;
 }
 
+.flow-guide-button:focus-visible {
+	outline: 2px solid var(--text-color);
+	outline-offset: 2px;
+}
+
+/* Inverted text/background keeps the primary button high-contrast in both themes. */
 .flow-guide-button.is-primary {
-	border-color: var(--primary);
-	background: var(--primary);
-	color: var(--white);
+	border-color: var(--text-color);
+	background: var(--text-color);
+	color: var(--fg-color, var(--card-bg));
 }
 
+.flow-guide-button.is-primary:hover {
+	background: var(--text-color);
+	opacity: 0.88;
+}
+
+/* Documentation layout: contents menu on the left, one reading column. */
 .flow-guide-shell {
-	max-width: 1440px;
-	margin: 0 auto;
-	padding: 40px 24px 64px;
-}
-
-.flow-guide-hero {
-	padding: 40px;
-	border: 1px solid var(--border-color);
-	border-radius: 16px;
-	background: linear-gradient(135deg, var(--card-bg) 0%, var(--control-bg) 100%);
-}
-
-.flow-guide-eyebrow {
-	margin-bottom: 12px;
-	color: var(--text-muted);
-	font-size: var(--text-xs);
-	font-weight: 600;
-	letter-spacing: 0.1em;
-}
-
-.flow-guide-hero h1 {
-	margin: 0 0 12px;
-	color: var(--text-color);
-	font-size: 32px;
-	font-weight: 650;
-	letter-spacing: -0.025em;
-}
-
-.flow-guide-hero p {
-	max-width: 760px;
-	margin: 0;
-	color: var(--text-muted);
-	font-size: var(--text-md);
-	line-height: 1.65;
-}
-
-.flow-guide-hero-actions {
-	display: flex;
-	gap: 10px;
-	margin-top: 22px;
-}
-
-.flow-guide-section {
-	margin-top: 36px;
-}
-
-.flow-guide-section h2 {
-	margin: 0 0 6px;
-	font-size: var(--text-xl);
-	font-weight: 600;
-}
-
-.flow-guide-section-copy {
-	margin: 0;
-	color: var(--text-muted);
-}
-
-.flow-guide-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-	gap: 16px;
+	grid-template-columns: 240px minmax(0, 1fr);
+	gap: 56px;
+	max-width: 1120px;
+	margin: 0 auto;
+	padding: 32px 24px 80px;
+}
+
+.flow-guide-nav {
+	position: sticky;
+	top: 80px;
+	align-self: start;
+	max-height: calc(100vh - 100px);
+	overflow-y: auto;
+	font-size: var(--text-sm);
+}
+
+.flow-guide-nav-menu > summary {
+	display: none;
+}
+
+.flow-guide-nav-group + .flow-guide-nav-group {
 	margin-top: 20px;
 }
 
-.flow-guide-steps {
-	display: grid;
-	grid-template-columns: repeat(4, minmax(0, 1fr));
-	gap: 12px;
-	margin: 20px 0 0;
+.flow-guide-nav-title {
+	margin-bottom: 6px;
+	color: var(--text-color);
+	font-weight: 600;
+}
+
+.flow-guide-nav ul {
+	margin: 0;
 	padding: 0;
+	border-left: 1px solid var(--border-color);
+	list-style: none;
+}
+
+.flow-guide-nav a {
+	display: block;
+	margin-left: -1px;
+	padding: 4px 12px;
+	border-left: 2px solid transparent;
+	color: var(--text-muted);
+	line-height: 1.45;
+	text-decoration: none;
+}
+
+.flow-guide-nav a:hover {
+	color: var(--text-color);
+	text-decoration: none;
+}
+
+.flow-guide-nav a.is-active {
+	border-left-color: var(--text-color);
+	color: var(--text-color);
+	font-weight: 600;
+}
+
+.flow-guide-doc {
+	min-width: 0;
+	max-width: 760px;
+	color: var(--text-color);
+	font-size: var(--text-md);
+	line-height: 1.7;
+}
+
+.flow-guide-doc p {
+	margin: 0 0 14px;
+	color: var(--text-color);
+}
+
+/* Title block */
+.flow-guide-intro {
+	scroll-margin-top: 80px;
+	padding-bottom: 24px;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.flow-guide-eyebrow {
+	margin-bottom: 8px;
+	color: var(--text-muted);
+	font-size: var(--text-xs);
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.flow-guide-intro h1 {
+	margin: 0 0 14px;
+	color: var(--text-color);
+	font-size: 32px;
+	font-weight: 650;
+	letter-spacing: -0.02em;
+}
+
+.flow-guide-doc .flow-guide-lead {
+	color: var(--text-muted);
+	font-size: var(--text-lg);
+	line-height: 1.6;
+}
+
+/* Chapters and topics */
+.flow-guide-chapter {
+	scroll-margin-top: 80px;
+	padding-top: 40px;
+}
+
+.flow-guide-chapter + .flow-guide-chapter {
+	margin-top: 16px;
+	border-top: 1px solid var(--border-color);
+}
+
+.flow-guide-chapter-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+	margin-bottom: 10px;
+}
+
+.flow-guide-chapter h2 {
+	margin: 0;
+	color: var(--text-color);
+	font-size: 24px;
+	font-weight: 650;
+	letter-spacing: -0.01em;
+}
+
+.flow-guide-topic {
+	scroll-margin-top: 80px;
+	margin-top: 28px;
+}
+
+.flow-guide-topic-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px 12px;
+	margin-bottom: 8px;
+}
+
+.flow-guide-topic h3 {
+	margin: 0;
+	color: var(--text-color);
+	font-size: var(--text-lg);
+	font-weight: 600;
+}
+
+.flow-guide-topic h4 {
+	margin: 18px 0 8px;
+	color: var(--text-muted);
+	font-size: var(--text-xs);
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+.flow-guide-badge {
+	--icon-stroke: currentColor;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 12px;
+	border: 1px solid currentColor;
+	border-radius: 999px;
+	background: var(--bg-orange);
+	color: var(--text-on-orange);
+	font-size: var(--text-sm);
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+/* Numbered steps */
+.flow-guide-steps {
+	margin: 0 0 14px;
+	padding: 0;
+	counter-reset: flow-step;
 	list-style: none;
 }
 
 .flow-guide-steps li {
-	display: flex;
-	align-items: flex-start;
-	gap: 10px;
-	padding: 16px;
-	border: 1px solid var(--border-color);
-	border-radius: 10px;
-	background: var(--card-bg);
-	line-height: 1.5;
+	position: relative;
+	padding-left: 36px;
+	counter-increment: flow-step;
 }
 
-.flow-guide-step-number {
+.flow-guide-steps li + li {
+	margin-top: 8px;
+}
+
+.flow-guide-steps li::before {
+	content: counter(flow-step);
+	position: absolute;
+	top: 2px;
+	left: 0;
 	display: flex;
-	flex: 0 0 auto;
 	align-items: center;
 	justify-content: center;
 	width: 24px;
 	height: 24px;
+	border: 1px solid var(--border-color);
 	border-radius: 50%;
-	background: var(--control-bg);
+	background: var(--card-bg);
+	color: var(--text-color);
 	font-size: var(--text-xs);
 	font-weight: 600;
+	line-height: 1;
 }
 
+/* Field reference table */
+.flow-guide-table {
+	width: 100%;
+	margin: 0 0 14px;
+	border: 1px solid var(--border-color);
+	border-collapse: separate;
+	border-spacing: 0;
+	border-radius: 8px;
+	overflow: hidden;
+	background: var(--card-bg);
+	font-size: var(--text-sm);
+	line-height: 1.5;
+}
+
+.flow-guide-table th,
+.flow-guide-table td {
+	padding: 10px 14px;
+	text-align: left;
+	vertical-align: top;
+}
+
+.flow-guide-table th {
+	background: var(--control-bg);
+	color: var(--text-muted);
+	font-size: var(--text-xs);
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.flow-guide-table td {
+	border-top: 1px solid var(--border-color);
+	color: var(--text-muted);
+	overflow-wrap: anywhere;
+}
+
+.flow-guide-table td:first-child {
+	width: 150px;
+	color: var(--text-color);
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+/* Example / Tip / Note callouts */
+.flow-guide-callout {
+	--icon-stroke: currentColor;
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	margin: 0 0 14px;
+	padding: 12px 14px;
+	border-left: 3px solid var(--border-color);
+	border-radius: 0 8px 8px 0;
+	background: var(--control-bg);
+	font-size: var(--text-sm);
+	line-height: 1.55;
+}
+
+.flow-guide-callout .icon {
+	margin-top: 3px;
+}
+
+.flow-guide-callout strong {
+	display: block;
+	margin-bottom: 2px;
+	color: var(--text-color);
+}
+
+.flow-guide-callout span {
+	color: var(--text-color);
+}
+
+.flow-guide-callout.is-tip {
+	border-left-color: var(--text-on-blue);
+	background: var(--bg-blue);
+}
+
+.flow-guide-callout.is-tip .icon,
+.flow-guide-callout.is-tip strong {
+	color: var(--text-on-blue);
+}
+
+.flow-guide-callout.is-note {
+	border-left-color: var(--text-on-orange);
+	background: var(--bg-orange);
+}
+
+.flow-guide-callout.is-note .icon,
+.flow-guide-callout.is-note strong {
+	color: var(--text-on-orange);
+}
+
+.flow-guide-callout.is-example {
+	border-left-color: var(--text-muted);
+}
+
+/* Example prompts */
 .flow-guide-prompts {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
 	gap: 10px;
-	margin-top: 16px;
+	margin-bottom: 14px;
 }
 
 .flow-guide-prompts button {
@@ -206,11 +432,12 @@ body[data-route^="flow-guide"] .layout-main-section {
 	align-items: center;
 	justify-content: flex-start;
 	gap: 10px;
-	padding: 14px 16px;
+	padding: 12px 14px;
 	border: 1px solid var(--border-color);
-	border-radius: 10px;
+	border-radius: 8px;
 	background: var(--card-bg);
 	color: var(--text-color);
+	font-size: var(--text-sm);
 	text-align: left;
 }
 
@@ -218,116 +445,77 @@ body[data-route^="flow-guide"] .layout-main-section {
 	background: var(--control-bg);
 }
 
-.flow-guide-card {
-	padding: 22px;
-	border: 1px solid var(--border-color);
-	border-radius: 12px;
-	background: var(--card-bg);
-}
+/* Tablet and phone: contents become a collapsible menu above the article. */
+@media (max-width: 1023px) {
+	.flow-guide-shell {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 24px;
+	}
 
-.flow-guide-card:nth-child(even) {
-	background: #faf9f6;
-}
+	.flow-guide-nav {
+		position: static;
+		max-height: none;
+		overflow: visible;
+	}
 
-.flow-guide-card-icon {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 36px;
-	height: 36px;
-	margin-bottom: 16px;
-	border-radius: 9px;
-	background: var(--control-bg);
-	color: var(--text-color);
-}
+	.flow-guide-nav-menu {
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		background: var(--card-bg);
+	}
 
-.flow-guide-card h3,
-.flow-guide-note h3 {
-	margin: 0 0 7px;
-	font-size: var(--text-md);
-	font-weight: 600;
-}
+	.flow-guide-nav-menu > summary {
+		display: list-item;
+		padding: 10px 14px;
+		color: var(--text-color);
+		font-weight: 600;
+		cursor: pointer;
+	}
 
-.flow-guide-card p,
-.flow-guide-note p {
-	margin: 0;
-	color: var(--text-muted);
-	line-height: 1.55;
-}
+	.flow-guide-nav-menu[open] > summary {
+		border-bottom: 1px solid var(--border-color);
+	}
 
-.flow-guide-card .flow-guide-example {
-	margin-top: 12px;
-	padding-top: 12px;
-	border-top: 1px solid var(--border-color);
-	color: var(--text-color);
-	font-size: var(--text-sm);
-}
+	.flow-guide-nav-group {
+		padding: 0 14px;
+	}
 
-.flow-guide-how-to {
-	margin-top: 14px;
-	padding-top: 14px;
-	border-top: 1px solid var(--border-color);
-}
+	.flow-guide-nav-group:first-of-type {
+		padding-top: 12px;
+	}
 
-.flow-guide-how-to h4 {
-	margin: 0 0 8px;
-	color: var(--text-color);
-	font-size: var(--text-sm);
-	font-weight: 600;
-}
+	.flow-guide-nav-group:last-child {
+		padding-bottom: 14px;
+	}
 
-.flow-guide-how-to ol {
-	margin: 0;
-	padding-left: 20px;
-	color: var(--text-muted);
-	font-size: var(--text-sm);
-	line-height: 1.5;
-}
-
-.flow-guide-how-to li + li {
-	margin-top: 5px;
-}
-
-.flow-guide-note {
-	--icon-stroke: var(--text-muted);
-	display: flex;
-	align-items: flex-start;
-	gap: 16px;
-	margin-top: 24px;
-	padding: 20px 22px;
-	border: 1px solid var(--border-color);
-	border-radius: 12px;
-	background: var(--card-bg);
-}
-
-.flow-guide-note > svg {
-	flex: 0 0 auto;
-	color: var(--text-muted);
+	.flow-guide-doc {
+		max-width: none;
+	}
 }
 
 @media (max-width: 767px) {
 	.flow-guide-header {
-		padding: 0 14px;
+		padding: 0 16px;
 	}
 
 	.flow-guide-shell {
-		padding: 20px 14px 40px;
+		padding: 20px 16px 48px;
 	}
 
-	.flow-guide-hero {
-		padding: 26px 22px;
-	}
-
-	.flow-guide-hero h1 {
+	.flow-guide-intro h1 {
 		font-size: 26px;
 	}
 
-	.flow-guide-grid {
-		grid-template-columns: 1fr;
+	.flow-guide-chapter h2 {
+		font-size: 20px;
 	}
 
-	.flow-guide-steps,
 	.flow-guide-prompts {
-		grid-template-columns: 1fr;
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.flow-guide-table td:first-child {
+		width: auto;
+		white-space: normal;
 	}
 }
