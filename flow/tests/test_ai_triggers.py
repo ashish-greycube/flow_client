@@ -181,6 +181,50 @@ class TestDispatch(IntegrationTestCase):
 		enqueue.assert_called_once()
 		self.assertEqual(frappe.session.user, "Administrator")  # restored afterward
 
+	def test_condition_check_keeps_the_callers_session(self):
+		# The check runs inside the saving user's web request; it must not wipe their session.
+		self.trigger.condition = "doc.status == 'Open'"
+		self.trigger.save()
+		doc = frappe.get_doc({"doctype": "ToDo", "description": "session"}).insert()
+		frappe.local.session.sid = "real-sid"
+		frappe.local.session.data.csrf_token = "real-token"
+		frappe.local.form_dict = frappe._dict(action="Save")
+
+		with patch("frappe.enqueue") as enqueue:
+			dispatch(doc, "after_insert")
+
+		enqueue.assert_called_once()
+		self.assertEqual(frappe.session.user, "Administrator")
+		self.assertEqual(frappe.session.sid, "real-sid")
+		self.assertEqual(frappe.session.data.csrf_token, "real-token")
+		self.assertEqual(frappe.form_dict.action, "Save")
+
+	def test_dispatch_evaluates_condition_without_server_scripts(self):
+		self.trigger.condition = "doc.status == 'Closed'"
+		self.trigger.save()
+		closed_doc = frappe.get_doc(
+			{"doctype": "ToDo", "description": "closed one", "status": "Closed"}
+		).insert()
+
+		with (
+			patch("flow.utils.conditions.is_safe_exec_enabled", return_value=False),
+			patch("frappe.enqueue") as enqueue,
+		):
+			dispatch(closed_doc, "after_insert")
+
+		enqueue.assert_called_once()
+
+	def test_dispatch_skips_writes_made_by_a_trigger_run(self):
+		doc = frappe.get_doc({"doctype": "ToDo", "description": "loop"}).insert()
+		frappe.flags.in_flow_trigger = True
+		try:
+			with patch("frappe.enqueue") as enqueue:
+				dispatch(doc, "after_insert")
+		finally:
+			frappe.flags.in_flow_trigger = False
+
+		enqueue.assert_not_called()
+
 	def test_condition_runtime_error_skips_trigger(self):
 		self.trigger.condition = "doc.status.no_such_method()"
 		self.trigger.save()
@@ -365,6 +409,23 @@ class TestFire(IntegrationTestCase):
 		with patch.object(Model, "chat", return_value=_final("done")):
 			fire(self.trigger.name, target_doctype="ToDo", target_name=todo.name)
 		self.assertEqual(frappe.session.user, "Administrator")
+
+	def test_fire_does_not_retrigger_itself(self):
+		# The agent's own write to the watched doc must not enqueue the trigger again.
+		todo = frappe.get_doc({"doctype": "ToDo", "description": "loop"}).insert()
+		enqueued = []
+
+		def chat(*args, **kwargs):
+			doc = frappe.get_doc("ToDo", todo.name)
+			with patch("frappe.enqueue", side_effect=lambda *a, **k: enqueued.append(a)):
+				dispatch(doc, "after_insert")
+			return _final("done")
+
+		with patch.object(Model, "chat", side_effect=chat):
+			fire(self.trigger.name, target_doctype="ToDo", target_name=todo.name)
+
+		self.assertEqual(enqueued, [])
+		self.assertFalse(frappe.flags.in_flow_trigger)
 
 	def _execute_then_final(self):
 		from flow.lib.model import ToolCall

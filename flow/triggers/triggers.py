@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -21,6 +22,10 @@ def dispatch(doc: Document, method: str | None = None) -> None:
 	if doc.doctype in {"Flow Run", "Flow Trigger", "Flow Agent", "Flow Tool", "Flow Model"}:
 		return
 	if frappe.flags.in_install or frappe.flags.in_migrate or frappe.flags.in_install_db:
+		return
+	# Writes made by a trigger's own agent must not fire triggers again, or a trigger
+	# whose agent edits the doc it watches would loop forever.
+	if frappe.flags.in_flow_trigger:
 		return
 
 	triggers = _doctype_triggers(doc.doctype, method)
@@ -72,7 +77,9 @@ def fire(
 
 	# A trigger runs as its configured `run_as` user (falling back to the owner)
 	original_user = frappe.session.user
+	in_flow_trigger = frappe.flags.in_flow_trigger
 	frappe.set_user(t.run_as or t.owner)
+	frappe.flags.in_flow_trigger = True
 	try:
 		doc = None
 		if target_doctype and target_name:
@@ -95,6 +102,7 @@ def fire(
 		)
 		return run.name
 	finally:
+		frappe.flags.in_flow_trigger = in_flow_trigger
 		frappe.set_user(original_user)
 
 
@@ -115,12 +123,24 @@ def _passes_condition(trigger, doc: Document) -> bool:
 	"""Evaluate the pre-enqueue condition as the trigger's run identity (matching fire),
 	so a permission-sensitive condition doesn't silently under-fire for the low-privilege
 	user whose action triggered it."""
-	original_user = frappe.session.user
-	frappe.set_user(trigger.run_as or trigger.owner)
-	try:
+	with _run_as(trigger.run_as or trigger.owner):
 		return _eval_condition(trigger.condition, doc)
+
+
+@contextmanager
+def _run_as(user: str):
+	"""Switch the acting user for a block. Unlike frappe.set_user this keeps the rest of
+	the session (sid, csrf token, form_dict), so it is safe inside the web request of
+	the user whose save fired the doc event."""
+	session = frappe.local.session
+	original_user, original_perms = session.user, frappe.local.user_perms
+	session.user = user
+	frappe.local.user_perms = None
+	try:
+		yield
 	finally:
-		frappe.set_user(original_user)
+		session.user = original_user
+		frappe.local.user_perms = original_perms
 
 
 def _eval_condition(condition: str, doc: Document) -> bool:

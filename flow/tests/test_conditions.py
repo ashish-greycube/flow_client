@@ -1,6 +1,8 @@
 # Copyright (c) 2026, Frappe Technologies and contributors
 # License: MIT. See LICENSE
 
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -8,6 +10,11 @@ from flow.utils.conditions import evaluate_condition, validate_condition
 
 
 class TestValidateCondition(IntegrationTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.enterClassContext(cls.enable_safe_exec())
+
 	def test_empty_condition_is_valid(self):
 		validate_condition(None)
 		validate_condition("")
@@ -66,3 +73,39 @@ class TestEvaluateCondition(IntegrationTestCase):
 	def test_sandbox_blocks_imports(self):
 		with self.assertRaises(Exception):
 			evaluate_condition("import os\nresult = True", {"doc": frappe._dict()})
+
+
+class TestWithoutServerScripts(IntegrationTestCase):
+	"""Server Scripts are off by default; expression conditions must still work."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.enterClassContext(patch("flow.utils.conditions.is_safe_exec_enabled", return_value=False))
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def test_expression_verdict(self):
+		doc = frappe._dict(status="Open", rows=[1, 2, 3])
+		self.assertTrue(evaluate_condition("doc.status == 'Open' and len(doc.rows) > 2", {"doc": doc}))
+		self.assertFalse(evaluate_condition("doc.status == 'Closed'", {"doc": doc}))
+
+	def test_expression_can_query_db_and_read_user(self):
+		todo = frappe.get_doc({"doctype": "ToDo", "description": "db check", "status": "Closed"}).insert()
+		condition = (
+			'frappe.db.get_value("ToDo", doc.name, "status") == "Closed" '
+			"and frappe.session.user == 'Administrator'"
+		)
+		self.assertTrue(evaluate_condition(condition, {"doc": frappe._dict(name=todo.name)}))
+
+	def test_expression_blocks_private_attributes(self):
+		with self.assertRaises(Exception):
+			evaluate_condition("doc.__class__", {"doc": frappe._dict()})
+
+	def test_multiline_script_rejected_on_save(self):
+		with self.assertRaisesRegex(frappe.ValidationError, "Server Scripts"):
+			validate_condition("status = doc.status\nresult = status == 'Open'")
+
+	def test_expression_still_valid_on_save(self):
+		validate_condition("doc.status == 'Open'")

@@ -7,6 +7,11 @@ A condition is either a single Python expression whose value is the verdict,
 or a multi-line script that sets a `result` variable. Authoring is restricted
 to System Managers (Flow Trigger / Flow Knowledge Source permissions), the
 same trust level frappe requires for Server Scripts.
+
+Server Scripts are off by default, and safe_exec refuses to run without them.
+A single expression then falls back to frappe.safe_eval — the evaluator frappe
+itself uses for Workflow and Notification conditions — so the common case keeps
+working. A multi-line script has no such fallback and is rejected on save.
 """
 
 from __future__ import annotations
@@ -16,9 +21,21 @@ from typing import Any
 
 import frappe
 from frappe import _
-from frappe.utils.safe_exec import safe_exec
+from frappe.utils.safe_exec import get_safe_globals, is_safe_exec_enabled, safe_exec
 
 RESULT_VAR = "result"
+
+_EXPRESSION_BUILTINS = {
+	"len": len,
+	"str": str,
+	"bool": bool,
+	"abs": abs,
+	"min": min,
+	"max": max,
+	"sum": sum,
+	"any": any,
+	"all": all,
+}
 
 
 def validate_condition(condition: str | None) -> None:
@@ -36,14 +53,37 @@ def validate_condition(condition: str | None) -> None:
 			_("A multi-line condition must set a <code>result</code> variable."),
 			title=_("Invalid Condition"),
 		)
+	if not is_safe_exec_enabled():
+		frappe.throw(
+			_(
+				"Multi-line conditions need Server Scripts to be enabled. Use a single expression instead."
+			),
+			title=_("Invalid Condition"),
+		)
 
 
 def evaluate_condition(condition: str, context: dict[str, Any]) -> bool:
 	"""Run `condition` in the sandbox with `context` in scope; return the verdict.
 	Raises on execution errors — callers decide how to fail."""
-	script = f"{RESULT_VAR} = ({condition}\n)" if _is_expression(condition) else condition
-	exec_globals, _locals = safe_exec(script, context, script_filename="flow_condition")
+	if _is_expression(condition):
+		if not is_safe_exec_enabled():
+			return bool(frappe.safe_eval(condition, None, {**_expression_namespace(), **context}))
+		condition = f"{RESULT_VAR} = ({condition}\n)"
+	exec_globals, _locals = safe_exec(condition, context, script_filename="flow_condition")
 	return bool(exec_globals.get(RESULT_VAR))
+
+
+def _expression_namespace() -> dict[str, Any]:
+	"""Names an expression can use without Server Scripts: read-only lookups, the
+	current user and the safe utils, mirroring frappe's workflow conditions."""
+	return {
+		**_EXPRESSION_BUILTINS,
+		"frappe": frappe._dict(
+			db=frappe._dict(get_value=frappe.db.get_value, get_list=frappe.db.get_list),
+			session=frappe._dict(user=frappe.session.user),
+			utils=get_safe_globals().get("frappe").get("utils"),
+		),
+	}
 
 
 def _is_expression(condition: str) -> bool:
