@@ -211,7 +211,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-02 10:13:51.686244",
+ "modified": "2026-10-02 12:48:14.215532",
  "modified_by": "Administrator",
  "module": "Flow",
  "name": "Flow",
@@ -220,7 +220,14 @@
  "parent_page": "",
  "public": 1,
  "quick_lists": [],
- "roles": [],
+ "roles": [
+  {
+   "role": "Flow User"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
  "sequence_id": 1.0,
  "shortcuts": [
   {

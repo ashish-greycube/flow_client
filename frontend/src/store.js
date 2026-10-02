@@ -517,6 +517,14 @@ function handleEvent(event, msg) {
 		case "done":
 			msg.pending = false;
 			finalizeTiming(msg);
+			// The model answered with nothing at all; the server saves the same note.
+			if (event.status === "Completed" && event.iterations > 0 && !msg.parts.length) {
+				msg.parts.push(
+					makeTextPart(
+						__("The AI returned an empty reply. Please try again or rephrase your message."),
+					),
+				);
+			}
 			if (event.status === "Paused") {
 				msg.questions = prepareQuestions(event.questions);
 				msg.runName = runName.value;

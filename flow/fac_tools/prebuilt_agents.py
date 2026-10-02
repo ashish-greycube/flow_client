@@ -45,8 +45,12 @@ def sync_prebuilt_agents(model: str | None = None) -> None:
 
 
 def sync_after_model_insert(doc, _method=None) -> None:
+	"""The first model on a site creates the prebuilt agents. Their tools must exist by
+	then, and on a fresh install no migrate has created them yet, so sync them first."""
 	if doc.enabled:
-		sync_prebuilt_agents(model=doc.name)
+		from flow.fac_tools.registry import sync_fac_tools
+
+		sync_fac_tools(model=doc.name)
 
 
 def _sync_agent(specification: dict[str, Any], model_name: str) -> None:
@@ -71,15 +75,27 @@ def _sync_agent(specification: dict[str, Any], model_name: str) -> None:
 	doc = frappe.get_doc("Flow Agent", title)
 	if not doc.is_system_generated:
 		return
+	# Refresh what the catalog owns; keep what an admin decided after creation (enabled,
+	# auto routing, per-tool permissions, extra tools). This runs on every migrate.
 	doc.instructions = values["instructions"]
 	doc.max_iterations = values["max_iterations"]
-	doc.allow_auto_routing = values["allow_auto_routing"]
 	doc.routing_description = values["routing_description"]
 	doc.routing_doctypes = values["routing_doctypes"]
 	doc.routing_domain = values["routing_domain"]
-	doc.enabled = values["enabled"]
-	doc.set("tools", values["tools"])
+	# Never switch an agent on here, but switch it off when the site can no longer run it.
+	if not compatible:
+		doc.enabled = 0
+	_add_missing_tools(doc, _tool_names(specification))
 	doc.save(ignore_permissions=True)
+
+
+def _add_missing_tools(doc, tool_names: tuple[str, ...]) -> None:
+	"""Append catalog tools the agent lacks. Existing rows, with their permission
+	override, and tools an admin added stay as they are."""
+	existing = {row.tool for row in doc.tools}
+	for name in tool_names:
+		if name not in existing:
+			doc.append("tools", {"tool": name})
 
 
 def _is_compatible(specification: dict[str, Any]) -> bool:

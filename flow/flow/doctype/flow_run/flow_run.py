@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 	from flow.lib.agent import Event, RunResult
 
 JSON_FIELDS = ("tool_calls", "questions", "usage", "config_snapshot")
+EMPTY_REPLY_NOTE = "The AI returned an empty reply. Please try again or rephrase your message."
 
 
 @dataclass
@@ -108,6 +109,11 @@ class FlowRun(Document):
 		self.iterations = (self.iterations or 0) + result.iterations
 		references = collect_document_references(result.messages)
 		output = linkify_document_mentions(result.output, references)
+		# The model finished without producing anything: no text and no tool calls. Say so
+		# instead of saving a blank answer. (A Deny ends the run without calling the model at
+		# all, and iterations is 0 then.)
+		if not result.paused and result.iterations and not result.tool_calls and not (output or "").strip():
+			output = EMPTY_REPLY_NOTE
 		self.output = output
 		self.tool_calls = _dump_json(
 			[{"id": c.id, "name": c.name, "arguments": c.arguments} for c in result.tool_calls]

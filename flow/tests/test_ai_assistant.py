@@ -9,6 +9,7 @@ from flow.assistant import (
 	ASSISTANT_INSTRUCTIONS,
 	sync_builtin_assistant,
 )
+from flow.fac_tools.registry import FAC_TOOLS
 from flow.tools.builtins import BUILTIN_TOOLS
 
 
@@ -38,7 +39,8 @@ class TestSyncBuiltinAssistant(IntegrationTestCase):
 		self.assertEqual(doc.instructions, ASSISTANT_INSTRUCTIONS)
 		self.assertTrue(doc.is_system_generated)
 		self.assertTrue(doc.enabled)
-		expected_slugs = sorted(t.name for t in BUILTIN_TOOLS)
+		# The first model also syncs the advanced tools onto it (as a migrate would).
+		expected_slugs = sorted({t.name for t in BUILTIN_TOOLS} | {t.name for t in FAC_TOOLS})
 		self.assertEqual(sorted(row.tool for row in doc.tools), expected_slugs)
 
 	def test_sync_updates_instructions_on_existing_system_agent(self):

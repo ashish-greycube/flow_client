@@ -13,6 +13,11 @@ if TYPE_CHECKING:
 	from frappe.model.document import Document
 
 DOC_EVENTS = frozenset({"after_insert", "on_update", "on_submit", "on_cancel", "on_trash"})
+# An agent run can take many model calls and tools; the default queue would stop it at
+# 5 minutes. The long queue's workers expect jobs like this, and 25 minutes covers a
+# full run at the agent's iteration limit.
+TRIGGER_QUEUE = "long"
+TRIGGER_TIMEOUT = 1500
 
 
 def dispatch(doc: Document, method: str | None = None) -> None:
@@ -35,6 +40,8 @@ def dispatch(doc: Document, method: str | None = None) -> None:
 			continue
 		frappe.enqueue(
 			"flow.triggers.fire",
+			queue=TRIGGER_QUEUE,
+			timeout=TRIGGER_TIMEOUT,
 			enqueue_after_commit=True,
 			trigger=trigger.name,
 			target_doctype=doc.doctype,
@@ -62,7 +69,7 @@ def dispatch_scheduled() -> None:
 			continue
 		if nxt <= now:
 			frappe.db.set_value("Flow Trigger", t.name, "last_fired_at", now, update_modified=False)
-			frappe.enqueue("flow.triggers.fire", trigger=t.name)
+			frappe.enqueue("flow.triggers.fire", queue=TRIGGER_QUEUE, timeout=TRIGGER_TIMEOUT, trigger=t.name)
 
 
 def fire(
@@ -89,6 +96,10 @@ def fire(
 				return None
 			if t.condition and not _eval_condition(t.condition, doc):
 				return None
+		# A Scheduled trigger has no document; its condition decides whether this slot runs
+		# (e.g. only on working days, or only while there are open leads to report).
+		elif t.condition and not _eval_condition(t.condition, None):
+			return None
 
 		prompt = frappe.render_template(t.prompt_template, {"doc": doc, "now": frappe.utils.now_datetime()})
 		agent_doc = frappe.get_doc("Flow Agent", t.agent)
@@ -148,7 +159,11 @@ def _eval_condition(condition: str, doc: Document) -> bool:
 
 	from flow.utils.conditions import evaluate_condition
 
-	context = {"doc": doc, "utils": get_safe_globals().get("frappe").get("utils")}
+	context = {
+		"doc": doc,
+		"now": frappe.utils.now_datetime(),
+		"utils": get_safe_globals().get("frappe").get("utils"),
+	}
 	try:
 		return evaluate_condition(condition, context)
 	except Exception:

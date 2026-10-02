@@ -20,6 +20,8 @@ stream id) lets a reloaded page find the run and follow it again.
 from __future__ import annotations
 
 import json
+import pickle
+import threading
 import time
 from typing import Any
 
@@ -32,9 +34,10 @@ FALLBACK_QUEUE = "long"
 JOB_TIMEOUT = 600
 # How long a dispatched run may wait for a worker before it counts as abandoned.
 QUEUED_TTL = 300
-# Refreshed while the job runs; must outlast the longest gap between two events.
-HEARTBEAT_TTL = 180
-HEARTBEAT_INTERVAL = 15
+# Refreshed on a timer while the job runs, so a tool that works silently for minutes
+# doesn't make the run look dead. A killed job stops refreshing and lapses within the TTL.
+HEARTBEAT_TTL = 90
+HEARTBEAT_INTERVAL = 30
 EVENTS_TTL = 900
 # Text deltas arrive per token; they are sent in batches of roughly this many seconds.
 TEXT_FLUSH_SECONDS = 0.15
@@ -170,8 +173,7 @@ class _Publisher:
 		self.seq = 0
 		self.text: list[str] = []
 		self.last_flush = time.monotonic()
-		self.last_beat = 0.0
-		self._beat()
+		self._heartbeat = _Heartbeat(_alive_key(run_name), stream)
 
 	def send(self, event: Any) -> None:
 		from flow.api.api import _event_to_dict
@@ -196,6 +198,7 @@ class _Publisher:
 			self.flush()
 			frappe.cache.expire_key(_events_key(self.run_name, self.stream), EVENTS_TTL)
 		finally:
+			self._heartbeat.stop()
 			frappe.cache.delete_value(_alive_key(self.run_name))
 			frappe.cache.delete_value(_stop_key(self.run_name))
 
@@ -211,12 +214,33 @@ class _Publisher:
 		except Exception:
 			# The browser still gets the event from the list when it polls.
 			pass
-		if time.monotonic() - self.last_beat >= HEARTBEAT_INTERVAL:
-			self._beat()
+
+
+class _Heartbeat:
+	"""Keeps a run's alive key fresh from a side thread until stopped. The thread has no
+	Frappe request context, so it writes the fully-qualified key to Redis directly, in
+	the same pickled form `frappe.cache.get_value` reads."""
+
+	def __init__(self, key: str, stream: str) -> None:
+		self.redis_key = frappe.cache.make_key(key)
+		self.value = pickle.dumps(stream)
+		self.stopped = threading.Event()
+		self._beat()
+		self.thread = threading.Thread(target=self._run, daemon=True)
+		self.thread.start()
+
+	def stop(self) -> None:
+		self.stopped.set()
+
+	def _run(self) -> None:
+		while not self.stopped.wait(HEARTBEAT_INTERVAL):
+			try:
+				self._beat()
+			except Exception:
+				pass  # one missed beat is covered by the TTL
 
 	def _beat(self) -> None:
-		frappe.cache.set_value(_alive_key(self.run_name), self.stream, expires_in_sec=HEARTBEAT_TTL)
-		self.last_beat = time.monotonic()
+		frappe.cache.set(self.redis_key, self.value, px=int(HEARTBEAT_TTL * 1000))
 
 
 def _mark_failed_if_running(run_name: str, error: str) -> None:

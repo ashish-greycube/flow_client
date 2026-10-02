@@ -1,6 +1,7 @@
 # Copyright (c) 2026, Frappe Technologies and contributors
 # License: MIT. See LICENSE
 
+import time
 from typing import Any
 from unittest.mock import patch
 
@@ -226,3 +227,26 @@ class TestBackgroundRun(IntegrationTestCase):
 			settings.chat_run_mode = "Background Job"
 			settings.save()
 			self.assertTrue(background.is_available())
+
+	def test_a_run_stays_alive_while_a_tool_works_silently(self):
+		payload, job = self._start()
+		seen: list[bool] = []
+
+		def slow_chat(self, messages, tools=None, *, stream=False):
+			# No events for longer than the heartbeat TTL, like a long report or OCR.
+			def gen():
+				time.sleep(0.6)
+				seen.append(background.is_alive(payload["name"]))
+				yield "done"
+				return _final("done")
+
+			return gen()
+
+		with (
+			patch.object(background, "HEARTBEAT_INTERVAL", 0.1),
+			patch.object(background, "HEARTBEAT_TTL", 0.3),
+		):
+			self._execute(job, slow_chat)
+
+		self.assertEqual(seen, [True])
+		self.assertFalse(background.is_alive(payload["name"]))

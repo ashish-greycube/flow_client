@@ -1,5 +1,7 @@
 app_name = "flow"
-app_title = "Flow.ai"
+# Must match the desktop icon's label (desktop_icon/flow.json): on install Frappe adds an
+# app icon labelled app_title unless an icon with that label already exists.
+app_title = "Flow"
 app_publisher = "Shrihari Mahabal"
 app_description = "Frappe Flow — native AI agents, tools, and triggers for Frappe"
 app_email = "shriharimahabal08@gmail.com"

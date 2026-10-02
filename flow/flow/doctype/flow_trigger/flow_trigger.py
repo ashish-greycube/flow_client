@@ -74,6 +74,15 @@ class FlowTrigger(Document):
 		from flow.utils.conditions import validate_condition
 
 		validate_condition(self.condition)
+		if self.event == "Scheduled" and _uses_doc(self.condition):
+			frappe.throw(
+				_(
+					"A Scheduled trigger runs without a document, so its condition cannot use "
+					"<code>doc</code>. Use <code>now</code>, <code>utils</code> or "
+					"<code>frappe.db</code> instead, e.g. <code>utils.get_weekday() != 'Sunday'</code>."
+				),
+				title=_("Invalid Condition"),
+			)
 
 	def _validate_template(self):
 		from jinja2 import TemplateSyntaxError
@@ -83,3 +92,16 @@ class FlowTrigger(Document):
 			SandboxedEnvironment().parse(self.prompt_template or "")
 		except TemplateSyntaxError as e:
 			frappe.throw(_("Invalid Jinja template: {0}").format(e), title=_("Invalid Template"))
+
+
+def _uses_doc(condition: str | None) -> bool:
+	"""Whether the condition refers to the name `doc`."""
+	import ast
+
+	if not condition:
+		return False
+	try:
+		tree = ast.parse(condition)
+	except SyntaxError:
+		return False
+	return any(isinstance(node, ast.Name) and node.id == "doc" for node in ast.walk(tree))

@@ -32,6 +32,12 @@ RETRIEVAL_FRACTION = 0.5
 RESERVED_OUTPUT_TOKENS = 4096
 # How many retrieved chunks to inject for the current turn.
 RETRIEVAL_TOP_K = 8
+# Answer recorded for a tool call that never got one (the run was stopped while it waited
+# for approval). Model APIs require every tool call to be answered before the next message.
+NOT_RUN_TOOL_RESULT = {
+	"status": "not_run",
+	"message": "This tool call was not run: the user stopped the run before approving it.",
+}
 
 
 def _set_active_run(run: str | None) -> None:
@@ -224,6 +230,9 @@ class FlowSession(Document):
 
 		self.reload()
 		self._assert_not_blocked()
+		# Nothing in this chat is waiting for approval (checked above), so every unanswered
+		# call is a leftover from a stopped run.
+		self._close_unanswered_tool_calls()
 		attachment_data = self._load_attachments(attachments)
 		if not self.title:
 			title_input = input.strip() or (attachment_data[0]["file_name"] if attachment_data else "")
@@ -376,6 +385,8 @@ class FlowSession(Document):
 		run = frappe.get_doc("Flow Run", run_name)
 
 		self.reload()
+		if self._close_unanswered_tool_calls(keep_last_open=True):
+			self.save(ignore_permissions=True)
 		snapshot = json.loads(run.config_snapshot) if run.config_snapshot else {}
 		messages = self._build_prompt_messages()
 		if not messages:
@@ -472,6 +483,51 @@ class FlowSession(Document):
 		for attachment in self.attachments:
 			grouped.setdefault(attachment.run, []).append(attachment)
 		return grouped
+
+	def _close_unanswered_tool_calls(self, *, keep_last_open: bool = False) -> bool:
+		"""Record a "not run" answer for each tool call that has none (left behind when a run
+		was stopped while waiting for approval). Model APIs reject a history with an
+		unanswered tool call, so without this every later turn in the chat fails or comes
+		back empty. `keep_last_open` leaves the calls at the very end alone: when resuming,
+		they belong to the paused run that is waiting for Approve or Deny. Changes the rows
+		in memory only; returns whether any were added, and the caller saves."""
+		answered = {row.tool_call_id for row in self.messages if row.role == "tool"}
+		ordered: list[Any] = []
+		missing: list[str] = []
+		missing_run: str | None = None
+		added = False
+		for row in list(self.messages):
+			if row.role != "tool" and missing:
+				for call_id in missing:
+					ordered.append(self._not_run_row(call_id, missing_run))
+				missing = []
+				added = True
+			ordered.append(row)
+			if row.role == "assistant" and row.tool_calls:
+				missing = [c["id"] for c in json.loads(row.tool_calls) if c.get("id") not in answered]
+				missing_run = row.run
+		if missing and not keep_last_open:
+			ordered.extend(self._not_run_row(call_id, missing_run) for call_id in missing)
+			added = True
+		if added:
+			self.set("messages", ordered)
+			for index, row in enumerate(self.messages, start=1):
+				row.idx = index
+		return added
+
+	def _not_run_row(self, call_id: str, run: str | None):
+		return frappe.get_doc(
+			{
+				"doctype": "Flow Session Message",
+				"parent": self.name,
+				"parenttype": self.doctype,
+				"parentfield": "messages",
+				"role": "tool",
+				"tool_call_id": call_id,
+				"content": json.dumps(NOT_RUN_TOOL_RESULT),
+				"run": run,
+			}
+		)
 
 	def _assert_not_blocked(self) -> None:
 		blocking = frappe.db.get_value(

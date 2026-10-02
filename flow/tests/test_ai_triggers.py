@@ -93,6 +93,7 @@ class TestDispatch(IntegrationTestCase):
 		self.assertEqual(kwargs["target_doctype"], "ToDo")
 		self.assertEqual(kwargs["target_name"], "todo-x")
 		self.assertTrue(kwargs["enqueue_after_commit"])
+		self.assertEqual((kwargs["queue"], kwargs["timeout"]), ("long", 1500))
 
 	def test_dispatch_ignores_unknown_method(self):
 		doc = _Bag(doctype="ToDo", name="todo-x")
@@ -283,6 +284,17 @@ class TestDispatchScheduled(IntegrationTestCase):
 
 		enqueue.assert_called_once()
 		self.assertEqual(enqueue.call_args.kwargs["trigger"], self.trigger.name)
+
+	def test_dispatch_scheduled_uses_the_long_queue(self):
+		frappe.db.set_value(
+			"Flow Trigger", self.trigger.name, "creation", frappe.utils.add_to_date(None, days=-30)
+		)
+		with patch("frappe.enqueue") as enqueue:
+			dispatch_scheduled()
+
+		calls = [c for c in enqueue.call_args_list if c.kwargs.get("trigger") == self.trigger.name]
+		self.assertEqual(len(calls), 1)
+		self.assertEqual((calls[0].kwargs["queue"], calls[0].kwargs["timeout"]), ("long", 1500))
 
 	def test_dispatch_scheduled_skips_when_next_run_in_future(self):
 		future = frappe.utils.now_datetime() + timedelta(minutes=5)
@@ -488,6 +500,37 @@ class TestFire(IntegrationTestCase):
 
 		self.assertIsNone(run_name)
 		chat.assert_not_called()
+
+	def _scheduled(self, **overrides):
+		return frappe.get_doc(
+			_trigger(
+				self.agent.name,
+				title="Scheduled Condition Test",
+				event="Scheduled",
+				target_doctype=None,
+				doc_event=None,
+				cron_expression="0 9 * * 1",
+				prompt_template="weekly run at {{ now }}",
+				**overrides,
+			)
+		).insert()
+
+	def test_scheduled_trigger_runs_when_its_condition_passes(self):
+		scheduled = self._scheduled(condition="now.year > 2000")
+
+		with patch.object(Model, "chat", return_value=_final("done")):
+			self.assertIsNotNone(fire(scheduled.name))
+
+	def test_scheduled_trigger_skips_when_its_condition_fails(self):
+		scheduled = self._scheduled(condition="utils.today() == '1999-01-01'")
+
+		with patch.object(Model, "chat", return_value=_final("done")) as chat:
+			self.assertIsNone(fire(scheduled.name))
+		chat.assert_not_called()
+
+	def test_scheduled_trigger_condition_cannot_use_doc(self):
+		with self.assertRaisesRegex(frappe.ValidationError, "cannot use"):
+			self._scheduled(condition='doc.status == "Lead"')
 
 	def test_fire_scheduled_trigger_without_target(self):
 		scheduled = frappe.get_doc(
