@@ -182,6 +182,10 @@ export const submitFeedback = (args) => frappe.xcall("flow.api.submit_feedback",
 // so a reloaded session isn't blocked from starting the next turn.
 export const recoverSession = (session) => frappe.xcall("flow.api.recover_session", { session });
 
+// The chat's run that is still executing in a background job, if any: { run, stream,
+// status }. Lets a reloaded page follow it again.
+export const getActiveRun = (name) => frappe.xcall("flow.api.get_active_run", { name });
+
 // Stop a run at the user's request: finalize an aborted stream's run or terminate a
 // paused run so the agent won't continue.
 export const stopRun = (run_name) => frappe.xcall("flow.api.stop_run", { run_name });

@@ -29,9 +29,14 @@ def start_run(
 	attachments: list[str] | str | None = None,
 	routing: str | None = None,
 	stream: bool | str = False,
+	background: bool | str = False,
 ) -> dict[str, Any] | Response:
 	"""Start a new turn. Creates a session if none is given. `attachments` are uploaded File
-	names whose text is injected into this turn. With `stream=True`, returns SSE."""
+	names whose text is injected into this turn. With `stream=True`, returns SSE.
+
+	With `background=True` as well, the turn runs in a background job when a worker is
+	available: this returns at once with the run and a stream id, and the events are
+	followed over realtime / `get_run_events`. Without a worker it falls back to SSE."""
 	require_flow_user()
 	files = _parse_attachments(attachments)
 	if not isinstance(input, str) or (not input.strip() and not files):
@@ -48,6 +53,15 @@ def start_run(
 		agent, session, model, routing,
 		file_only=bool(files) and not input.strip(),
 	)
+	if stream and _is_truthy(background) and _background_available():
+		run = convo.begin_turn(
+			input,
+			attachments=files,
+			routing_action=decision.action,
+			routing_confidence=decision.confidence,
+			routing_reason=decision.reason,
+		)
+		return _dispatch_background(run, kind="start", announce=True)
 	out = convo.chat(
 		input,
 		attachments=files,
@@ -126,9 +140,14 @@ def get_chat_feedback(name: str) -> list[dict[str, Any]]:
 
 @frappe.whitelist()
 def resume_run(
-	run_name: str, answers: dict[str, Any] | str, stream: bool | str = False
+	run_name: str,
+	answers: dict[str, Any] | str,
+	stream: bool | str = False,
+	background: bool | str = False,
 ) -> dict[str, Any] | Response:
-	"""Resume a Paused run. `answers` maps each question.key to the user's answer. With `stream=True`, returns SSE."""
+	"""Resume a Paused run. `answers` maps each question.key to the user's answer. With
+	`stream=True`, returns SSE; with `background=True` as well, resumes in a background
+	job like `start_run`."""
 	require_flow_user()
 	from flow.lib.session import assert_run_owner, load_session
 
@@ -142,6 +161,9 @@ def resume_run(
 			_("Only Paused runs can be resumed (this run is {0}).").format(run.status),
 			title=_("Cannot Resume"),
 		)
+
+	if stream and _is_truthy(background) and _background_available():
+		return _dispatch_background(run, kind="resume", answers=parsed_answers)
 
 	out = load_session(run.session).resume(parsed_answers, stream=stream)
 	return _sse_response(out) if stream else _summarize(out)
@@ -159,9 +181,61 @@ def stop_run(run_name: str) -> dict[str, str]:
 
 	run = frappe.get_doc("Flow Run", run_name.strip())
 	assert_run_owner(run)
+	# A background job has no connection to abort; it stops at its next event instead.
+	from flow.lib.background import request_stop
+
+	request_stop(run.name)
 	if run.status not in ("Completed", "Failed"):
 		run.mark_failed("Stopped by user.")
 	return {"status": run.status}
+
+
+@frappe.whitelist()
+def get_run_events(run_name: str, stream: str, after: int | str = 0) -> dict[str, Any]:
+	"""Events of a background run's stream with a sequence number above `after`, plus the
+	run's status and whether its job is still alive. The browser polls this alongside the
+	realtime push, so a dropped socket event is never lost."""
+	require_flow_user()
+	from flow.lib import background
+	from flow.lib.session import assert_run_owner
+
+	if not isinstance(run_name, str) or not run_name.strip():
+		frappe.throw(_("Run is required."), title=_("Invalid Run"))
+	if not isinstance(stream, str) or not stream.strip():
+		frappe.throw(_("Stream is required."), title=_("Invalid Stream"))
+
+	run = frappe.get_doc("Flow Run", run_name.strip())
+	assert_run_owner(run)
+	return {
+		"events": background.events_after(run.name, stream.strip(), frappe.utils.cint(after)),
+		"status": run.status,
+		"error": run.error,
+		"alive": background.active_stream(run.name) == stream.strip(),
+	}
+
+
+@frappe.whitelist()
+def get_active_run(name: str) -> dict[str, Any] | None:
+	"""The chat's run that is currently executing in a background job, if any, so a
+	reloaded page can follow it again instead of showing the turn as interrupted."""
+	require_flow_user()
+	if not isinstance(name, str) or not name.strip():
+		frappe.throw(_("Conversation is required."), title=_("Invalid Conversation"))
+	from flow.lib.background import active_stream
+	from flow.routing.conversation import chat_sessions
+
+	runs = frappe.get_all(
+		"Flow Run",
+		filters={"session": ["in", chat_sessions(name.strip())], "status": ["in", ["Running", "Paused"]]},
+		fields=["name", "status"],
+		order_by="creation desc",
+		limit_page_length=5,
+	)
+	for run in runs:
+		stream = active_stream(run.name)
+		if stream:
+			return {"run": run.name, "stream": stream, "status": run.status}
+	return None
 
 
 @frappe.whitelist()
@@ -181,6 +255,7 @@ def recover_session(session: str) -> dict[str, int]:
 		frappe.throw(_("Session is required."), title=_("Invalid Session"))
 
 	from flow.flow.doctype.flow_session.flow_session import RUNNING_STALE_SECONDS
+	from flow.lib.background import is_alive
 	from flow.routing.conversation import resolve_chat
 
 	_conversation, doc = resolve_chat(session.strip())
@@ -192,6 +267,9 @@ def recover_session(session: str) -> dict[str, int]:
 	recovered = 0
 	for run in running:
 		if frappe.utils.time_diff_in_seconds(now, run.creation) <= RUNNING_STALE_SECONDS:
+			continue
+		# Still executing in a background job — old, but not abandoned.
+		if is_alive(run.name):
 			continue
 		frappe.db.set_value(
 			"Flow Run",
@@ -391,6 +469,42 @@ def attach_file(file: str) -> dict[str, Any]:
 	from flow.flow.doctype.flow_session_attachment.flow_session_attachment import stage_attachment
 
 	return stage_attachment(file.strip())
+
+
+def _background_available() -> bool:
+	from flow.lib.background import is_available
+
+	return is_available()
+
+
+def _dispatch_background(
+	run: FlowRun, *, kind: str, answers: dict[str, Any] | None = None, announce: bool = False
+) -> dict[str, Any]:
+	"""Hand a recorded turn to a background job. The reply tells the browser which run and
+	stream to follow; `announce` adds the run_started event a stream would open with."""
+	from flow.flow.doctype.flow_run.flow_run import RunStarted
+	from flow.lib.background import dispatch
+
+	payload: dict[str, Any] = {
+		"background": True,
+		"name": run.name,
+		"stream": dispatch(run.name, kind=kind, answers=answers),
+	}
+	if announce:
+		session = frappe.get_doc("Flow Session", run.session)
+		payload["event"] = _event_to_dict(
+			RunStarted(
+				name=run.name,
+				session=session.conversation or run.session,
+				agent=session.agent,
+				skill=run.skill,
+				agent_session=run.session,
+				routing_action=run.routing_action,
+				routing_confidence=run.routing_confidence,
+				routing_reason=run.routing_reason,
+			)
+		)
+	return payload
 
 
 def _sse_response(events: Iterable[Event]) -> Response:

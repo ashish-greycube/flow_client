@@ -1,6 +1,6 @@
 import { ref, computed } from "vue";
 import * as api from "@/api/client";
-import { startRun, resumeRun } from "@/api/stream";
+import { startRun, resumeRun, followRun } from "@/api/stream";
 import { normalizeToolName } from "@/lib/toolMeta";
 import { readPanelState } from "@/lib/panelState";
 import { __ } from "@/lib/translate";
@@ -284,6 +284,8 @@ async function switchSession(name) {
 	await restoreFeedback(name, seq);
 	requestScroll();
 	await restorePausedRun(name);
+	// Not awaited: it resolves only when the followed run ends.
+	restoreActiveRun(name);
 }
 
 async function restoreFeedback(session, seq) {
@@ -308,6 +310,54 @@ async function restorePausedRun(session) {
 	last.runName = runs[0].name;
 	runName.value = runs[0].name;
 	requestScroll();
+}
+
+// A turn running in a background job outlives the page that started it. After a reload,
+// pick it back up: its events are replayed from the start, so the reply rebuilds and
+// then continues live instead of the turn showing as interrupted.
+async function restoreActiveRun(session) {
+	const active = await api.getActiveRun(session).catch(() => null);
+	if (!active || sessionName.value !== session || sending.value) return;
+
+	const last = messages.value[messages.value.length - 1];
+	let msg;
+	if (active.status === "Paused" && last?.role === "assistant") {
+		// An approval was answered and the run is resuming: continue its own message.
+		msg = last;
+		msg.questions = [];
+		msg.pending = true;
+		msg.startedAt = Date.now();
+	} else {
+		if (last?.role === "user") {
+			last.interrupted = false;
+			last.interruptedError = null;
+		}
+		msg = pushAssistant();
+	}
+	msg.runName = active.run;
+	runName.value = active.run;
+	sending.value = true;
+	abortController = new AbortController();
+	requestScroll(true);
+
+	try {
+		await followRun(
+			active.run,
+			active.stream,
+			(event) => handleEvent(event, msg),
+			abortController.signal,
+		);
+	} catch (e) {
+		if (e.name === "AbortError") {
+			msg.pending = false;
+			finalizeTiming(msg);
+		} else failMessage(msg, e);
+	} finally {
+		abortController = null;
+		sending.value = false;
+		requestScroll();
+		focusTick.value++;
+	}
 }
 
 // ── sending / streaming ────────────────────────────────────────────────────────
@@ -473,6 +523,8 @@ function handleEvent(event, msg) {
 				requestScroll(true);
 			}
 			refreshHistory();
+			// The run finished but its events were lost: load the saved reply instead.
+			if (event.resync) setTimeout(() => switchSession(sessionName.value));
 			break;
 		case "error":
 			msg.parts.push(makeErrorPart(event.message));

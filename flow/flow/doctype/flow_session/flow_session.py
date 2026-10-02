@@ -160,41 +160,20 @@ class FlowSession(Document):
 		Commits the current transaction before the model call (to release row locks). Do not
 		call with pending writes you may want to roll back on failure; commit-and-compensate
 		around it instead."""
-		from flow.flow.doctype.flow_run.flow_run import create_run, stream_with_persistence
+		from flow.flow.doctype.flow_run.flow_run import stream_with_persistence
 
-		self.reload()
-		self._assert_not_blocked()
-		attachment_data = self._load_attachments(attachments)
-		if not self.title:
-			title_input = input.strip() or (attachment_data[0]["file_name"] if attachment_data else "")
-			self.db_set("title", derive_title(title_input))
-			# A conversation-backed session's title is pre-set from the conversation (which
-			# already refines its own title — see create_conversation) and never hits this
-			# branch; this is the legacy no-conversation path, so refine here instead.
-			if input.strip():
-				from flow.routing.title import enqueue_title
-
-				enqueue_title("Flow Session", self.name, input.strip(), self.model)
-		
-		runtime = self._runtime
-		run_snapshot = dict(self._snapshot)
-		if not self.title:
-			self.db_set("title", derive_title(input))
-
-		run = create_run(
+		run = self.begin_turn(
+			input,
+			attachments=attachments,
 			source=source,
-			input=input,
-			session=self.name,
 			trigger=trigger,
 			reference_doctype=reference_doctype,
 			reference_name=reference_name,
-			config_snapshot=run_snapshot,
 			routing_action=routing_action,
 			routing_confidence=routing_confidence,
 			routing_reason=routing_reason,
 		)
-		self._persist_turn(input, attachment_data, run.name)
-		self._index_retrieval_attachments(run.name, {d["file"]: d["extracted_text"] for d in attachment_data})
+		runtime = self._runtime
 		run_input = self._build_prompt_messages()
 
 		# Release row locks and publish the Running run before the long model call, so a
@@ -224,6 +203,70 @@ class FlowSession(Document):
 			_set_active_run(None)
 		run.apply_result(result)
 		return run
+
+	def begin_turn(
+		self,
+		input: str,
+		*,
+		attachments: list[str] | None = None,
+		source: str = "Manual",
+		trigger: str | None = None,
+		reference_doctype: str | None = None,
+		reference_name: str | None = None,
+		routing_action: str | None = None,
+		routing_confidence: float | None = None,
+		routing_reason: str | None = None,
+	) -> FlowRun:
+		"""Record a turn without running it: create the Running Flow Run and persist the user
+		message and attachments. `chat` runs it inline; a background job runs it later with
+		`stream_run`."""
+		from flow.flow.doctype.flow_run.flow_run import create_run
+
+		self.reload()
+		self._assert_not_blocked()
+		attachment_data = self._load_attachments(attachments)
+		if not self.title:
+			title_input = input.strip() or (attachment_data[0]["file_name"] if attachment_data else "")
+			self.db_set("title", derive_title(title_input))
+			# A conversation-backed session's title is pre-set from the conversation (which
+			# already refines its own title — see create_conversation) and never hits this
+			# branch; this is the legacy no-conversation path, so refine here instead.
+			if input.strip():
+				from flow.routing.title import enqueue_title
+
+				enqueue_title("Flow Session", self.name, input.strip(), self.model)
+
+		run_snapshot = dict(self._snapshot)
+		if not self.title:
+			self.db_set("title", derive_title(input))
+
+		run = create_run(
+			source=source,
+			input=input,
+			session=self.name,
+			trigger=trigger,
+			reference_doctype=reference_doctype,
+			reference_name=reference_name,
+			config_snapshot=run_snapshot,
+			routing_action=routing_action,
+			routing_confidence=routing_confidence,
+			routing_reason=routing_reason,
+		)
+		self._persist_turn(input, attachment_data, run.name)
+		self._index_retrieval_attachments(run.name, {d["file"]: d["extracted_text"] for d in attachment_data})
+		return run
+
+	def stream_run(self, run: FlowRun) -> Generator[Event]:
+		"""Run a turn recorded earlier by `begin_turn`, as an event stream. The prompt is
+		rebuilt from the persisted transcript, so this works in a different process (a
+		background job) from the one that recorded the turn."""
+		from flow.flow.doctype.flow_run.flow_run import stream_with_persistence
+
+		runtime = self._runtime
+		run_input = self._build_prompt_messages()
+		runtime.auto_approve = False
+		_set_active_run(run.name)
+		return stream_with_persistence(lambda: runtime.run(run_input, stream=True), run)
 
 	def _load_attachments(self, attachments: list[str] | None) -> list[dict[str, Any]]:
 		"""Validate and extract each attached file (errors surface before the run is created)."""
@@ -445,8 +488,10 @@ class FlowSession(Document):
 				_("This session has a paused run. Resume it before starting a new turn."),
 				title=_("Run Paused"),
 			)
+		from flow.lib.background import is_alive
+
 		age = frappe.utils.time_diff_in_seconds(frappe.utils.now_datetime(), blocking.creation)
-		if age > RUNNING_STALE_SECONDS:
+		if age > RUNNING_STALE_SECONDS and not is_alive(blocking.name):
 			frappe.db.set_value(
 				"Flow Run",
 				blocking.name,
