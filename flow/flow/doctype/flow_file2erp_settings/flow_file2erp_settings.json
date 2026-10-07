@@ -5,6 +5,7 @@
  "engine": "InnoDB",
  "field_order": [
   "extraction_model",
+  "default_document_type",
   "column_break_limits",
   "max_file_size_mb"
  ],
@@ -16,6 +17,14 @@
    "label": "Extraction Model",
    "options": "Flow Model",
    "reqd": 1
+  },
+  {
+   "default": "Expense Claim",
+   "description": "Pre-selected Document Type for every new File2ERP upload. Users can still change it per file before extraction starts.",
+   "fieldname": "default_document_type",
+   "fieldtype": "Select",
+   "label": "Default Document Type",
+   "options": "Expense Claim\nSales Invoice\nPurchase Invoice\nPurchase Order\nSales Order\nPayment Entry"
   },
   {
    "fieldname": "column_break_limits",
@@ -33,7 +42,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-11 00:00:00",
+ "modified": "2026-10-07 00:00:00",
  "modified_by": "Administrator",
  "module": "Flow",
  "name": "Flow File2ERP Settings",

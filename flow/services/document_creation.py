@@ -32,7 +32,12 @@ def create_from_mapped(
 	from flow.tools.builtins import create
 
 	info = get_child_table_info(doctype)
-	values = _normalize_date_fields(dict(fields or {}), frappe.get_meta(doctype))
+	meta = frappe.get_meta(doctype)
+	values = _normalize_date_fields(_only_real_fields(fields or {}, meta), meta)
+	if values.get("posting_date") and meta.has_field("set_posting_time"):
+		# Sales/Purchase Invoice reset posting_date to today on validate unless this is
+		# set — the same "Edit Posting Date and Time" tick a Desk user would need.
+		values["set_posting_time"] = 1
 	if line_items:
 		fieldname = child_table_fieldname or (info[0] if info else None)
 		if not fieldname:
@@ -42,10 +47,18 @@ def create_from_mapped(
 			)
 		if info:
 			child_meta = frappe.get_meta(info[1])
-			line_items = [_normalize_date_fields(row, child_meta) for row in line_items]
+			line_items = [_normalize_date_fields(_only_real_fields(row, child_meta), child_meta) for row in line_items]
 		values[fieldname] = line_items
 
 	return create(doctype=doctype, records=[values])
+
+
+def _only_real_fields(values: dict[str, Any], meta) -> dict[str, Any]:
+	"""Drops keys that aren't fields of `meta` — e.g. a "customer_name_on_document"
+	review hint from flow.services.transaction_extraction, or a generic-path label
+	that never mapped onto a real field. Document.update() would otherwise set them as
+	stray attributes (or, worse, collide with a real attribute name)."""
+	return {k: v for k, v in (values or {}).items() if meta.has_field(k)}
 
 
 def _normalize_date_fields(values: dict[str, Any], meta) -> dict[str, Any]:
@@ -102,12 +115,26 @@ def find_missing_mandatory(
 	import frappe
 	from frappe import _
 
+	from flow.services.transaction_extraction import AUTO_FILLED_FIELDS, EXTRA_REQUIRED_FIELDS
+
+	# Fields ERPNext's own validate() fills in (debit_to, price lists, item uom, ...)
+	# aren't really "missing"; a few non-mandatory ones are needed in practice (an
+	# invoice row's item_code, a Payment Entry's party) — see transaction_extraction.
+	auto_parent, auto_child = AUTO_FILLED_FIELDS.get(doctype, (frozenset(), frozenset()))
+	extra_parent, extra_child = EXTRA_REQUIRED_FIELDS.get(doctype, ((), ()))
+
 	meta = frappe.get_meta(doctype)
 	missing: list[str] = []
 	for df in meta.fields:
+		if df.fieldname in extra_parent:
+			if (fields or {}).get(df.fieldname) in (None, ""):
+				missing.append(df.label or df.fieldname)
+			continue
 		if not df.reqd or df.read_only or df.hidden or df.default:
 			continue
 		if df.fieldtype in _LAYOUT_FIELDTYPES or df.fieldname in _EXCLUDED_MANDATORY_FIELDS:
+			continue
+		if df.fieldname in auto_parent:
 			continue
 		if df.fieldtype == "Table":
 			if not line_items:
@@ -121,12 +148,16 @@ def find_missing_mandatory(
 		child_mandatory = [
 			cdf
 			for cdf in frappe.get_meta(child_info[1]).fields
-			if cdf.reqd
-			and not cdf.read_only
-			and not cdf.hidden
-			and not cdf.default
-			and cdf.fieldtype not in _LAYOUT_FIELDTYPES
-			and cdf.fieldtype != "Table"
+			if cdf.fieldname in extra_child
+			or (
+				cdf.reqd
+				and not cdf.read_only
+				and not cdf.hidden
+				and not cdf.default
+				and cdf.fieldtype not in _LAYOUT_FIELDTYPES
+				and cdf.fieldtype != "Table"
+				and cdf.fieldname not in auto_child
+			)
 		]
 		for idx, row in enumerate(line_items, start=1):
 			for cdf in child_mandatory:

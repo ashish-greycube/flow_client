@@ -15,7 +15,7 @@ import json
 
 import frappe
 
-from flow.services import extraction, field_mapping, structuring
+from flow.services import extraction, field_mapping, structuring, transaction_extraction
 
 
 def process_entry(name: str, force: bool = False) -> None:
@@ -43,17 +43,21 @@ def process_entry(name: str, force: bool = False) -> None:
 			)
 			return
 
-		document_type = doc.document_type or "Expense Claim"
+		document_type = doc.document_type or settings.get("default_document_type") or "Expense Claim"
 		if document_type == "Expense Claim":
 			# Fast path: one minimal, purpose-built call, not generic-classify-then-remap
 			# — see flow.services.expense_claim_extraction for why.
 			result = _extract_for_expense_claim(text, doc.owner, model_name)
+		elif transaction_extraction.is_supported(document_type):
+			# Same fast path for the other File2ERP DocTypes (Sales/Purchase Invoice and
+			# Order, Payment Entry) — see flow.services.transaction_extraction.
+			result = _extract_for_transaction(text, document_type, doc.owner, model_name)
 		else:
 			result = _extract_generic(text, document_type, doc.owner, model_name)
 
 		fields, line_items = result["fields"], result["line_items"]
 		# has_content (not a plain "fields or line_items" truthiness check): the
-		# Expense Claim fast path always merges in empty placeholders for unresolved
+		# Expense Claim / transaction fast paths always merge in empty placeholders for unresolved
 		# mandatory fields, so `fields` alone can no longer tell a genuine miss from
 		# "found nothing, but company/currency resolved and are now sitting in there
 		# as placeholders too" — see expense_claim_extraction.extract_expense_claim.
@@ -98,6 +102,20 @@ def _extract_for_expense_claim(text: str, owner: str, model_name: str | None) ->
 	from flow.services import expense_claim_extraction
 
 	result = expense_claim_extraction.extract_expense_claim(text, owner, model=model_name)
+	return {
+		"fields": result["fields"],
+		"line_items": result["line_items"],
+		"ai_input": result.get("ai_input"),
+		"usage": result.get("usage") or {},
+		"confidence": None,
+		"notes": result.get("notes"),
+		"mapping_meta": None,
+		"has_content": result.get("has_content", False),
+	}
+
+
+def _extract_for_transaction(text: str, document_type: str, owner: str, model_name: str | None) -> dict:
+	result = transaction_extraction.extract_transaction(text, document_type, owner, model=model_name)
 	return {
 		"fields": result["fields"],
 		"line_items": result["line_items"],

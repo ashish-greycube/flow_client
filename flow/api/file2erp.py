@@ -18,7 +18,8 @@ from flow.auth import require_flow_user
 @frappe.whitelist()
 def create_file2erp_entry(file: str) -> dict[str, Any]:
 	"""Validate an uploaded File and create a File2ERP entry for it, defaulted to
-	document_type="Expense Claim" (the doctype's own field default). Extraction does
+	Flow File2ERP Settings' Default Document Type (falling back to the doctype's own
+	field default, Expense Claim, when that's unset). Extraction does
 	NOT start yet — it's scoped to document_type, so it waits for the user to confirm
 	(or change) that choice via start_extraction."""
 	require_flow_user()
@@ -35,14 +36,16 @@ def create_file2erp_entry(file: str) -> dict[str, Any]:
 	if not frappe.has_permission("Flow File2ERP", "create"):
 		frappe.throw(_("Not permitted to create File2ERP entries."), frappe.PermissionError)
 
-	doc = frappe.get_doc(
-		{
-			"doctype": "Flow File2ERP",
-			"file": file_doc.name,
-			"file_name": file_doc.file_name,
-			"file_size": file_doc.file_size,
-		}
-	).insert()
+	values = {
+		"doctype": "Flow File2ERP",
+		"file": file_doc.name,
+		"file_name": file_doc.file_name,
+		"file_size": file_doc.file_size,
+	}
+	default_document_type = frappe.get_cached_doc("Flow File2ERP Settings").get("default_document_type")
+	if default_document_type:
+		values["document_type"] = default_document_type
+	doc = frappe.get_doc(values).insert()
 	return doc.as_dict()
 
 
