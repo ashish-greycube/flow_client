@@ -25,8 +25,13 @@ DEFAULT_SPECS = [*DEFAULT_PROVIDERS, *DEFAULT_MACROS]
 def create_defaults():
 	installed_apps = set(frappe.get_installed_apps())
 	for spec in DEFAULT_SPECS:
-		if _can_create(spec, installed_apps):
+		if not _can_create(spec, installed_apps):
+			continue
+		# A default that fails validation must not abort the install or migrate it runs in.
+		try:
 			frappe.get_doc(spec["doc"]).insert(ignore_permissions=True)
+		except Exception:
+			frappe.log_error(title=f"Flow default not created: {spec['doc']['doctype']}")
 
 
 def _can_create(spec, installed_apps):

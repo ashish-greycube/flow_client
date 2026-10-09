@@ -66,7 +66,9 @@ def refine_title(doctype: str, docname: str, text: str, model: str | None = None
 		frappe.log_error(title="Chat title generation failed")
 		return
 	if title:
-		frappe.db.set_value(doctype, docname, "title", title)
+		# update_modified=False: this runs while the turn's own job still holds the record and
+		# saves it at the end; bumping `modified` here fails that save with TimestampMismatchError.
+		frappe.db.set_value(doctype, docname, "title", title, update_modified=False)
 
 
 def generate_title(text: str, model: str) -> str:
