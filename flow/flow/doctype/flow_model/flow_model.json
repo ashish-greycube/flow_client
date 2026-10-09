@@ -12,6 +12,7 @@
   "provider",
   "model_id",
   "context_window",
+  "column_break_credentials",
   "api_key",
   "base_url",
   "section_break_params",
@@ -59,6 +60,10 @@
    "read_only": 1
   },
   {
+   "fieldname": "column_break_credentials",
+   "fieldtype": "Column Break"
+  },
+  {
    "depends_on": "eval:!doc.provider",
    "description": "API key to authenticate with this model's endpoint. Needed when no Provider is linked.",
    "fieldname": "api_key",
@@ -79,14 +84,14 @@
    "label": "Parameters"
   },
   {
-   "description": "Optional JSON object passed to the model (e.g. <code>{\"temperature\": 0.2, \"max_tokens\": 1024}</code>)",
+   "description": "Optional JSON object passed to every call to this model, e.g. <code>{\"temperature\": 0.2, \"max_tokens\": 1024}</code>. Overrides the same keys in the Provider's Extra Params. Not every provider supports every key.<table class=\"table table-bordered table-sm\" style=\"margin-top:8px\"><thead><tr><th>Param</th><th>Value</th><th>Use</th></tr></thead><tbody><tr><td><code>temperature</code></td><td>0 \u2013 2</td><td>How creative the replies are. Use <b>0 \u2013 0.3</b> for ERP work (invoice reading, record creation, reports) so answers stay consistent.</td></tr><tr><td><code>max_tokens</code></td><td>e.g. 1024</td><td>Upper limit on reply length. Controls cost; set too low and long answers or tool calls get cut off.</td></tr><tr><td><code>top_p</code></td><td>0 \u2013 1</td><td>Alternative to temperature. Keep at <code>1</code> and tune temperature instead.</td></tr><tr><td><code>seed</code></td><td>integer</td><td>Makes replies repeatable for the same input (supported by OpenAI, DeepSeek). Useful when testing agents.</td></tr><tr><td><code>stop</code></td><td>list of strings</td><td>The model stops writing when it produces any of these texts.</td></tr><tr><td><code>frequency_penalty</code></td><td>-2 \u2013 2</td><td>Reduces repeated words. Rarely needed for ERP; leave unset.</td></tr><tr><td><code>presence_penalty</code></td><td>-2 \u2013 2</td><td>Encourages new topics. Rarely needed for ERP; leave unset.</td></tr><tr><td><code>reasoning_effort</code></td><td>low / medium / high</td><td>For reasoning models (o-series, GPT-5, Claude, Gemini thinking). Higher means better answers on complex accounting logic, but slower and costlier.</td></tr><tr><td><code>timeout</code></td><td>seconds</td><td>How long to wait for a reply before failing, e.g. <code>120</code> for large documents.</td></tr><tr><td><code>num_retries</code></td><td>integer</td><td>Retries on temporary provider errors such as rate limits, e.g. <code>2</code>.</td></tr></tbody></table>",
    "fieldname": "params",
    "fieldtype": "JSON",
    "label": "Params"
   }
  ],
  "links": [],
- "modified": "2026-07-04 00:00:00.000000",
+ "modified": "2026-10-09 01:28:16.970081",
  "modified_by": "Administrator",
  "module": "Flow",
  "name": "Flow Model",

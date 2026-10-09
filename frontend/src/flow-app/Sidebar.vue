@@ -105,6 +105,10 @@ function openTriggers() {
 	router.push("/triggers");
 }
 
+function openApprovals() {
+	router.push("/approvals");
+}
+
 // Hide a nav link entirely when the user has no read access to its doctype,
 // e.g. Flow Trigger / Flow Knowledge Base are System Manager-only.
 function canRead(doctype) {
@@ -113,6 +117,7 @@ function canRead(doctype) {
 const canReadAgent = canRead("Flow Agent");
 const canReadMacro = canRead("Flow Macro");
 const canReadTrigger = canRead("Flow Trigger");
+const canReadRun = canRead("Flow Run");
 const canReadKnowledgeBase = canRead("Flow Knowledge Base");
 const canReadFile2ERP = canRead("Flow File2ERP");
 
@@ -236,20 +241,18 @@ function readCollapsed() {
 				<span v-if="!collapsed">{{ __("Triggers") }}</span>
 			</button>
 			<button
-				v-if="canReadKnowledgeBase"
+				v-if="canReadRun"
 				class="flex h-[30px] w-full items-center rounded text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
 				:class="[
 					collapsed ? 'justify-center px-1' : 'gap-2 px-2',
-					route.path.startsWith('/knowledge-bases')
-						? 'bg-surface-selected shadow-sm'
-						: '',
+					route.path.startsWith('/approvals') ? 'bg-surface-selected shadow-sm' : '',
 				]"
-				:title="collapsed ? __('Knowledge Base') : undefined"
-				:aria-label="__('Knowledge Base')"
-				@click="openKnowledgeBases"
+				:title="collapsed ? __('Approvals') : undefined"
+				:aria-label="__('Approvals')"
+				@click="openApprovals"
 			>
-				<FeatherIcon name="book-open" class="h-4 w-4 shrink-0" />
-				<span v-if="!collapsed">{{ __("Knowledge Base") }}</span>
+				<FeatherIcon name="check-square" class="h-4 w-4 shrink-0" />
+				<span v-if="!collapsed">{{ __("Approvals") }}</span>
 			</button>
 			<button
 				v-if="canReadFile2ERP"
@@ -264,6 +267,22 @@ function readCollapsed() {
 			>
 				<FeatherIcon name="inbox" class="h-4 w-4 shrink-0" />
 				<span v-if="!collapsed">{{ __("File2ERP") }}</span>
+			</button>
+			<button
+				v-if="canReadKnowledgeBase"
+				class="flex h-[30px] w-full items-center rounded text-left text-sm text-ink-gray-8 hover:bg-surface-gray-2"
+				:class="[
+					collapsed ? 'justify-center px-1' : 'gap-2 px-2',
+					route.path.startsWith('/knowledge-bases')
+						? 'bg-surface-selected shadow-sm'
+						: '',
+				]"
+				:title="collapsed ? __('Knowledge Base') : undefined"
+				:aria-label="__('Knowledge Base')"
+				@click="openKnowledgeBases"
+			>
+				<FeatherIcon name="book-open" class="h-4 w-4 shrink-0" />
+				<span v-if="!collapsed">{{ __("Knowledge Base") }}</span>
 			</button>
 		</nav>
 

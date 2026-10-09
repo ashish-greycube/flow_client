@@ -29,7 +29,7 @@ class FlowModel(Document):
 		base_url: DF.Data | None
 		context_window: DF.Int
 		enabled: DF.Check
-		model_id: DF.Data
+		model_id: DF.Autocomplete
 		params: DF.JSON | None
 		provider: DF.Link | None
 		title: DF.Data

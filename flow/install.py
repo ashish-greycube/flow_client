@@ -1,10 +1,12 @@
 import frappe
 
+from flow.defaults import create_defaults
+
 ROLE_NAME = "Flow User"
 
 
 def after_install():
-    """Create the Flow User role and Flow's tools on a fresh install. Also runs after
+    """Create the Flow User role, Flow's tools and default records on a fresh install. Also runs after
     every migrate. The built-in agents follow once a Flow Model exists."""
     if not frappe.db.exists("Role", ROLE_NAME):
         role = frappe.new_doc("Role")
@@ -12,6 +14,7 @@ def after_install():
         role.desk_access = 1
         role.insert(ignore_permissions=True)
     _sync_tools()
+    create_defaults()
     frappe.db.commit()
 
 
@@ -26,3 +29,4 @@ def _sync_tools():
     sync_file2erp_tool()
     for advanced_tool in FAC_TOOLS:
         _sync_tool(advanced_tool)
+

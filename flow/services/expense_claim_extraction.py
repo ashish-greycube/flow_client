@@ -115,12 +115,13 @@ def extract_expense_claim(text: str, owner: str, *, model: str | None = None) ->
 			"has_content": bool(fields),
 		}
 
+	from flow.flow.doctype.flow_file2erp_settings.flow_file2erp_settings import with_extraction_instructions
 	from flow.lib.model import Model
 
 	capped = _cap_text(text)
 	response = Model(model_name).chat(
 		[
-			{"role": "system", "content": _SYSTEM_PROMPT},
+			{"role": "system", "content": with_extraction_instructions(_SYSTEM_PROMPT)},
 			{"role": "user", "content": capped},
 		]
 	)

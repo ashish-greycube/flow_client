@@ -1,11 +1,33 @@
 // Copyright (c) 2026, Frappe Technologies and contributors
 // License: MIT. See LICENSE
 
+const BUY_CREDITS_LINKS = [
+	["OpenAI", "https://platform.openai.com/settings/organization/billing/overview"],
+	["Anthropic (Claude)", "https://platform.claude.com/create/credits"],
+	["DeepSeek", "https://platform.deepseek.com/top_up"],
+	["Gemini", "https://aistudio.google.com/app/billing"],
+	["OpenRouter", "https://openrouter.ai/workspaces/default/keys"],
+];
+
 frappe.ui.form.on("Flow Provider", {
 	refresh(frm) {
 		frm.add_custom_button(__("Connect with ChatGPT"), () => start_chatgpt_login(frm));
+		render_buy_credits_table(frm);
 	},
 });
+
+function render_buy_credits_table(frm) {
+	const rows = BUY_CREDITS_LINKS.map(
+		([label, url]) =>
+			`<tr><td>${label}</td><td><a href="${url}" target="_blank" rel="noopener noreferrer">Buy Credits Of ${label} →</a></td></tr>`
+	).join("");
+	frm.get_field("buy_credits_html").$wrapper.html(
+		`<table class="table table-bordered">
+			<thead><tr><th>${__("Provider")}</th><th>${__("Buy Credits Link")}</th></tr></thead>
+			<tbody>${rows}</tbody>
+		</table>`
+	);
+}
 
 function start_chatgpt_login(frm) {
 	frappe.call({

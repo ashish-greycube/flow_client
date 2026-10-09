@@ -12,7 +12,9 @@
   "api_key",
   "base_url",
   "section_break_params",
-  "extra_params"
+  "extra_params",
+  "section_break_buy_credits",
+  "buy_credits_html"
  ],
  "fields": [
   {
@@ -59,10 +61,20 @@
    "fieldname": "extra_params",
    "fieldtype": "JSON",
    "label": "Extra Params"
+  },
+  {
+   "fieldname": "section_break_buy_credits",
+   "fieldtype": "Section Break",
+   "label": "Buy Credits"
+  },
+  {
+   "fieldname": "buy_credits_html",
+   "fieldtype": "HTML",
+   "label": "Buy Credits"
   }
  ],
  "links": [],
- "modified": "2026-09-11 16:43:33.736465",
+ "modified": "2026-10-09 12:30:00.000000",
  "modified_by": "Administrator",
  "module": "Flow",
  "name": "Flow Provider",

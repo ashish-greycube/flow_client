@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 from flow.lib.agent import Agent, RunResult
 from flow.lib.model import ChatResponse, Model, ToolCall

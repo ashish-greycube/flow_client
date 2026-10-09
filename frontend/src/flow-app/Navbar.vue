@@ -117,12 +117,13 @@ function onToggleTheme() {
 
 		<button
 			type="button"
-			class="flex h-7 w-7 items-center justify-center rounded-md border border-outline-gray-2 text-ink-gray-7 hover:bg-surface-gray-2"
+			class="flex h-7 items-center gap-1.5 rounded-md bg-surface-gray-7 px-2.5 text-sm font-medium text-ink-white shadow-sm hover:opacity-90"
 			:title="__('Open ERPNext Desk')"
 			:aria-label="__('Open ERPNext Desk')"
 			@click="openDesk"
 		>
 			<FeatherIcon name="external-link" class="h-3.5 w-3.5" />
+			<span>{{ __("Desk") }}</span>
 		</button>
 
 		

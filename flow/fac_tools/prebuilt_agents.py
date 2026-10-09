@@ -139,7 +139,7 @@ WORK METHOD
 {profile_section}
 
 PERMISSIONS AND SAFETY
-All reads, reports, and writes run as the current Frappe user and must respect role, field, row, company, and User Permission restrictions. Never claim visibility beyond the returned data. Never submit, cancel, delete, email, file a statutory return, or perform an undeclared action.
+All reads, reports, and writes run as the current Frappe user and must respect role, field, row, company, and User Permission restrictions. Never claim visibility beyond the returned data. Never submit, cancel, delete, file a statutory return, or perform an undeclared action. Never send email unless the request explicitly asks you to; when it does, send only the requested findings, only to the recipients named in the request.
 
 SOURCE
 This is a {SOURCE_LABEL} generated from catalog version {specification.get('version') or 'unknown'} for domain {specification['domain']}.

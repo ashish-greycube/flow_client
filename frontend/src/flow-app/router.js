@@ -7,6 +7,7 @@ import MacroView from "./views/MacroView.vue";
 import MacroRunView from "./views/MacroRunView.vue";
 import TriggersView from "./views/TriggersView.vue";
 import TriggerView from "./views/TriggerView.vue";
+import ApprovalsView from "./views/ApprovalsView.vue";
 import KnowledgeBasesView from "./views/KnowledgeBasesView.vue";
 import KnowledgeBaseFormView from "./views/KnowledgeBaseFormView.vue";
 import KnowledgeSourceFormView from "./views/KnowledgeSourceFormView.vue";
@@ -51,6 +52,7 @@ export const router = createRouter({
 			props: { isNew: true },
 		},
 		{ path: "/triggers/:name", name: "trigger", component: TriggerView, props: true },
+		{ path: "/approvals", name: "approvals", component: ApprovalsView },
 		{ path: "/knowledge-bases", name: "knowledge-bases", component: KnowledgeBasesView },
 		{
 			path: "/knowledge-bases/new",
@@ -91,6 +93,7 @@ function toFrappeSegments(route) {
 	if (route.name === "triggers") return ["flow-chat", "triggers"];
 	if (route.name === "trigger-new") return ["flow-chat", "triggers", "new"];
 	if (route.name === "trigger") return ["flow-chat", "triggers", route.params.name];
+	if (route.name === "approvals") return ["flow-chat", "approvals"];
 	if (route.name === "knowledge-bases") return ["flow-chat", "knowledge-bases"];
 	if (route.name === "knowledge-base-new") return ["flow-chat", "knowledge-bases", "new"];
 	if (route.name === "knowledge-base-edit") {
@@ -129,6 +132,7 @@ function toVueLocation(segments) {
 		if (sub === "new") return { name: "trigger-new" };
 		return { name: "trigger", params: { name: sub } };
 	}
+	if (section === "approvals") return { name: "approvals" };
 	if (section === "knowledge-bases") {
 		if (!sub) return { name: "knowledge-bases" };
 		if (sub === "new") return { name: "knowledge-base-new" };

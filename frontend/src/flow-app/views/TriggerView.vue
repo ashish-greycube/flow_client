@@ -200,9 +200,11 @@ function blankTrigger() {
 }
 
 function normalize(doc) {
+	// Empty fields come back as null; keep blankTrigger's "" for them so .trim() works.
+	const values = Object.fromEntries(Object.entries(doc).filter(([, value]) => value != null));
 	return {
 		...blankTrigger(),
-		...doc,
+		...values,
 		enabled: !!doc.enabled,
 		auto_approve: !!doc.auto_approve,
 	};
