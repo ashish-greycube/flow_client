@@ -46,7 +46,7 @@ class FlowFile2ERP(Document):
 		conversation: DF.Link | None
 		created_document: DF.DynamicLink | None
 		created_document_type: DF.Link | None
-		document_type: DF.Literal["Expense Claim", "Sales Invoice", "Purchase Invoice", "Purchase Order", "Sales Order", "Payment Entry"]
+		document_type: DF.Literal["Expense Claim", "Sales Invoice", "Purchase Invoice", "Purchase Order", "Sales Order", "Payment Entry", "Lead"]
 		error: DF.LongText | None
 		extracted_fields: DF.JSON | None
 		extracted_line_items: DF.JSON | None

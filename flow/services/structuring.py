@@ -25,6 +25,7 @@ CANDIDATE_DOCTYPES = (
 	"Purchase Order",
 	"Sales Order",
 	"Payment Entry",
+	"Lead",
 )
 
 _EMPTY: dict[str, Any] = {
@@ -59,6 +60,8 @@ _TYPE_GUIDANCE = (
 	"- Purchase Order: this company ordering from a supplier, no payment or invoice yet.\n"
 	"- Sales Order: a customer ordering from this company, no invoice yet.\n"
 	"- Payment Entry: evidence of a payment made or received, not itself a bill.\n"
+	"- Lead: a prospective customer's contact details — a business card, enquiry form or "
+	"contact sheet, with no transaction in it.\n"
 	"Resolve company and issuer/recipient before choosing Sales versus Purchase — the "
 	"direction of the transaction decides the type, not just the document's shape. A personal "
 	"travel/ride/meal receipt with no indication the company itself is the buyer or seller "
@@ -102,6 +105,7 @@ def extract_structured_data(text: str, *, model: str | None = None) -> dict[str,
 	Never sends file bytes — only text already produced by
 	flow.services.extraction.extract_text."""
 	from flow.lib.model import Model
+	from flow.flow.doctype.flow_file2erp_settings.flow_file2erp_settings import with_extraction_instructions
 
 	text = (text or "").strip()
 	if not text:
@@ -115,7 +119,7 @@ def extract_structured_data(text: str, *, model: str | None = None) -> dict[str,
 	capped = _cap_text(text)
 	response = Model(model_name).chat(
 		[
-			{"role": "system", "content": _system_prompt(available_doctypes)},
+			{"role": "system", "content": with_extraction_instructions(_system_prompt(available_doctypes))},
 			{"role": "user", "content": capped},
 		]
 	)

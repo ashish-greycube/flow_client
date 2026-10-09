@@ -7,7 +7,10 @@
   "extraction_model",
   "default_document_type",
   "column_break_limits",
-  "max_file_size_mb"
+  "max_file_size_mb",
+  "section_break_instructions",
+  "extraction_instructions"
+
  ],
  "fields": [
   {
@@ -24,7 +27,7 @@
    "fieldname": "default_document_type",
    "fieldtype": "Select",
    "label": "Default Document Type",
-   "options": "Expense Claim\nSales Invoice\nPurchase Invoice\nPurchase Order\nSales Order\nPayment Entry"
+   "options": "Expense Claim\nSales Invoice\nPurchase Invoice\nPurchase Order\nSales Order\nPayment Entry\nLead"
   },
   {
    "fieldname": "column_break_limits",
@@ -37,12 +40,23 @@
    "fieldtype": "Int",
    "label": "Max File Size (MB)",
    "non_negative": 1
-  }
+  },
+  {
+   "fieldname": "section_break_instructions",
+   "fieldtype": "Section Break",
+   "label": "Extraction Instructions"
+  },
+  {
+   "fieldname": "extraction_instructions",
+   "fieldtype": "Long Text",
+   "label": "Extraction Instructions",
+   "description": "Optional. Applied every time File2ERP turns the text read from a file into document fields, for every Document Type. Write plain rules, e.g. <code>Dates on our bills are DD/MM/YYYY.</code>, <code>Use the GSTIN printed under 'Billed By' as the supplier tax ID.</code>, <code>Ignore 'Round Off' lines.</code> These cannot change the output format."
+    }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-07 00:00:00",
+ "modified": "2026-10-09 12:00:00",
  "modified_by": "Administrator",
  "module": "Flow",
  "name": "Flow File2ERP Settings",

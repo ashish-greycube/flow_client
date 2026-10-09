@@ -52,6 +52,7 @@ const DOCUMENT_TYPE_OPTIONS = [
 	"Purchase Order",
 	"Sales Order",
 	"Payment Entry",
+	"Lead",
 ];
 
 const STATUS_THEME = {

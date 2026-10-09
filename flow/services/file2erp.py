@@ -50,7 +50,7 @@ def process_entry(name: str, force: bool = False) -> None:
 			result = _extract_for_expense_claim(text, doc.owner, model_name)
 		elif transaction_extraction.is_supported(document_type):
 			# Same fast path for the other File2ERP DocTypes (Sales/Purchase Invoice and
-			# Order, Payment Entry) — see flow.services.transaction_extraction.
+			# Order, Payment Entry, Lead) — see flow.services.transaction_extraction.
 			result = _extract_for_transaction(text, document_type, doc.owner, model_name)
 		else:
 			result = _extract_generic(text, document_type, doc.owner, model_name)

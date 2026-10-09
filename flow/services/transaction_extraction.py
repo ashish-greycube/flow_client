@@ -2,7 +2,8 @@
 # License: MIT. See LICENSE
 
 """Fast, single-call extraction for File2ERP's transaction DocTypes — Sales Invoice,
-Sales Order, Purchase Invoice, Purchase Order and Payment Entry — built the same way
+Sales Order, Purchase Invoice, Purchase Order and Payment Entry — plus Lead (a business
+card, enquiry form or contact sheet; no line items) — built the same way
 as flow.services.expense_claim_extraction, and for the same reasons: the target
 DocType is chosen by the user before extraction starts, so there's nothing to
 classify and nothing generic to remap. One minimal, purpose-built prompt per DocType
@@ -81,6 +82,9 @@ EXTRA_REQUIRED_FIELDS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
 	"Purchase Invoice": ((), ("item_code", "qty")),
 	"Purchase Order": (("schedule_date",), ("item_code", "qty")),
 	"Payment Entry": (("party_type", "party"), ()),
+	# Lead.set_lead_name refuses a Lead with neither a person's nor an organization's
+	# name; _build_lead falls back to company_name, so lead_name alone covers both.
+	"Lead": (("lead_name",), ()),
 }
 
 _ORDER_INVOICE_SPECS: dict[str, dict[str, Any]] = {
@@ -129,7 +133,21 @@ _ORDER_INVOICE_SPECS: dict[str, dict[str, Any]] = {
 	},
 }
 
-SUPPORTED_DOCTYPES = (*_ORDER_INVOICE_SPECS, "Payment Entry")
+SUPPORTED_DOCTYPES = (*_ORDER_INVOICE_SPECS, "Payment Entry", "Lead")
+
+# Lead fields that are plain text on the document, copied over as-is.
+_LEAD_TEXT_FIELDS = (
+	"lead_name",
+	"company_name",
+	"job_title",
+	"email_id",
+	"phone",
+	"mobile_no",
+	"whatsapp_no",
+	"website",
+	"city",
+	"state",
+)
 
 
 def is_supported(doctype: str | None) -> bool:
@@ -163,11 +181,12 @@ def extract_transaction(text: str, doctype: str, owner: str, *, model: str | Non
 		return _result(base_fields, [], notes="No extraction model configured.")
 
 	from flow.lib.model import Model
+	from flow.flow.doctype.flow_file2erp_settings.flow_file2erp_settings import with_extraction_instructions
 
 	capped = _cap_text(text)
 	response = Model(model_name).chat(
 		[
-			{"role": "system", "content": _system_prompt(doctype, context)},
+			{"role": "system", "content": with_extraction_instructions(_system_prompt(doctype, context))},
 			{"role": "user", "content": capped},
 		]
 	)
@@ -184,6 +203,8 @@ def extract_transaction(text: str, doctype: str, owner: str, *, model: str | Non
 
 	if doctype == "Payment Entry":
 		fields, line_items = _build_payment_entry(payload, base_fields, context)
+	elif doctype == "Lead":
+		fields, line_items = _build_lead(payload, base_fields)
 	else:
 		fields, line_items = _build_order_invoice(doctype, payload, base_fields, context)
 
@@ -222,6 +243,20 @@ def _system_prompt(doctype: str, context: dict[str, Any]) -> str:
 			'"reference_no": string|null (cheque/UTR/transaction id), '
 			'"mode_of_payment": string|null (e.g. Cash, Bank Transfer, Cheque, UPI, Card), '
 			'"notes": string|null}.'
+		)
+	if doctype == "Lead":
+		return preamble + (
+			"This is a prospective customer's contact details (a business card, enquiry form, "
+			"email signature, visitor/contact sheet or similar). The lead is the person or "
+			"organization being described — never this company itself. Return only JSON: "
+			'{"lead_name": string|null (the contact person\'s full name), '
+			'"company_name": string|null (their organization), '
+			'"job_title": string|null, "email_id": string|null, '
+			'"phone": string|null (landline/office), "mobile_no": string|null, '
+			'"whatsapp_no": string|null, "website": string|null, '
+			'"city": string|null, "state": string|null, "country": string|null, '
+			'"industry": string|null, '
+			'"notes": string|null (any enquiry/requirement text, briefly)}.'
 		)
 
 	spec = _ORDER_INVOICE_SPECS[doctype]
@@ -384,6 +419,38 @@ def _build_payment_entry(
 	return fields, []
 
 
+def _build_lead(
+	payload: dict[str, Any], base_fields: dict[str, Any]
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+	import frappe
+
+	fields = dict(base_fields)
+	for fieldname in _LEAD_TEXT_FIELDS:
+		value = _clean_str(payload.get(fieldname))
+		if value:
+			fields[fieldname] = value
+	if fields.get("email_id"):
+		fields["email_id"] = fields["email_id"].lower()
+	if not fields.get("lead_name") and fields.get("company_name"):
+		# Same fallback Lead.set_lead_name applies on save — set here so the review table
+		# shows it and the lead_name placeholder doesn't flag a Lead that would save fine.
+		fields["lead_name"] = fields["company_name"]
+
+	for fieldname, doctype in (("country", "Country"), ("industry", "Industry Type")):
+		match = _resolve_by_name(doctype, payload.get(fieldname))
+		if match:
+			fields[fieldname] = match
+
+	if fields.get("email_id"):
+		existing = frappe.db.get_value("Lead", {"email_id": fields["email_id"]}, "name")
+		if existing:
+			# Lead emails are unique unless CRM Settings allows duplicates — surfaced here
+			# as a review hint rather than only as a failure at Create Document time.
+			fields["existing_lead_with_same_email"] = existing
+
+	return fields, []
+
+
 # --- resolution helpers ------------------------------------------------------------
 
 
@@ -407,7 +474,7 @@ def _base_fields(doctype: str, context: dict[str, Any]) -> dict[str, Any]:
 	fields: dict[str, Any] = {}
 	if context.get("company"):
 		fields["company"] = context["company"]
-	if doctype != "Payment Entry" and context.get("currency"):
+	if doctype not in ("Payment Entry", "Lead") and context.get("currency"):
 		fields["currency"] = context["currency"]
 		fields["conversion_rate"] = 1.0
 	return fields

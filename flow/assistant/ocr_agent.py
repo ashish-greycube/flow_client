@@ -34,6 +34,7 @@ OCR_AGENT_INSTRUCTIONS = (
 	"- Purchase Order (this company ordering from a supplier)\n"
 	"- Sales Order (a customer ordering from this company)\n"
 	"- Payment Receipt / Payment Entry (evidence of a payment made or received)\n"
+	"- Lead (a business card, enquiry form or contact sheet for a prospective customer)\n"
 	"- Other — anything else supported on the site; discover it with find_doctypes/describe "
 	"instead of guessing.\n"
 	"Resolve company and issuer/recipient before choosing Sales versus Purchase for an invoice "

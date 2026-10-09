@@ -357,18 +357,19 @@ def _attach_source_file(doc, doctype: str, docname: str) -> None:
 
 def _link_back_to_entry(doc, doctype: str, docname: str) -> None:
 	"""Leaves a comment on the newly created document linking back to the File2ERP
-	entry it came from, so anyone looking at the ERPNext record later can trace it back
-	to the original upload/extraction/review. Best-effort, same reasoning as
-	_attach_source_file — never lets this fail the actual creation."""
+	entry it came from, with the file's extracted raw text below it, so anyone looking
+	at the ERPNext record later can trace it back to the original upload/extraction/
+	review and see what was read from the file without opening the entry. Best-effort,
+	same reasoning as _attach_source_file — never lets this fail the actual creation."""
 	try:
 		from frappe.utils import escape_html, get_url
 
 		link = get_url(f"/app/flow-chat/file2erp/{doc.name}")
 		label = escape_html(doc.file_name or doc.name)
-		frappe.get_doc(doctype, docname).add_comment(
-			"Comment",
-			_('Created from File2ERP entry: <a href="{0}">{1}</a>').format(link, label),
-		)
+		content = _('Created from File2ERP entry: <a href="{0}">{1}</a>').format(link, label)
+		if doc.raw_text:
+			content += "<br><b>{0}</b><pre>{1}</pre>".format(_("Raw Text"), escape_html(doc.raw_text))
+		frappe.get_doc(doctype, docname).add_comment("Comment", content)
 	except Exception:
 		frappe.log_error(
 			title="Flow File2ERP: could not link back to entry",

@@ -90,7 +90,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Document Type",
-   "options": "Expense Claim\nSales Invoice\nPurchase Invoice\nPurchase Order\nSales Order\nPayment Entry",
+   "options": "Expense Claim\nSales Invoice\nPurchase Invoice\nPurchase Order\nSales Order\nPayment Entry\nLead",
    "reqd": 1
   },
   {
@@ -222,7 +222,7 @@
   }
  ],
  "links": [],
- "modified": "2026-09-15 15:47:36.660619",
+ "modified": "2026-10-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Flow",
  "name": "Flow File2ERP",

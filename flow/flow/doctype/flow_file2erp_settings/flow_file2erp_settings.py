@@ -18,8 +18,9 @@ class FlowFile2ERPSettings(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		default_document_type: DF.Literal["Expense Claim", "Sales Invoice", "Purchase Invoice", "Purchase Order", "Sales Order", "Payment Entry"]
+		default_document_type: DF.Literal["Expense Claim", "Sales Invoice", "Purchase Invoice", "Purchase Order", "Sales Order", "Payment Entry", "Lead"]
 		extraction_model: DF.Link
+		extraction_instructions: DF.LongText | None
 		max_file_size_mb: DF.Int
 	# end: auto-generated types
 
@@ -32,4 +33,16 @@ class FlowFile2ERPSettings(Document):
 			frappe.throw(
 				_("{0} is not installed on this site.").format(self.default_document_type),
 				title=_("Invalid Setting"),
-			)
+		)
+
+def with_extraction_instructions(system_prompt: str) -> str:
+	"""Append the admin's Extraction Instructions to a prompt that turns file text into fields."""
+	instructions = (frappe.get_cached_doc("Flow File2ERP Settings").extraction_instructions or "").strip()
+	if not instructions:
+		return system_prompt
+	return (
+		f"{system_prompt}\n\n"
+		"Additional extraction instructions from the site admin. Follow them when reading the "
+		"text, but always keep the JSON output format described above:\n"
+		f"{instructions}"
+	)
