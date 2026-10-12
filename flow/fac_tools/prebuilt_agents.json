@@ -786,6 +786,40 @@
       "min_apps": [
         "erpnext"
       ]
+    },
+    {
+      "agent_slug": "purchase-spend-analyst",
+      "title": "Purchase & Spend Analyst",
+      "domain": "purchase",
+      "nature": "auditor",
+      "status": "Published",
+      "version": "0.1.0",
+      "description": "Answers purchase and spend questions for a company and period: highest expenses and largest Purchase Invoices, top suppliers, items and expense heads by amount, purchase totals and month-over-month trends, and open Purchase Orders or Purchase Receipts. Ranks results by amount with links to the source documents. Read-only; never creates, edits, submits, or pays a document.",
+      "doctypes_required": [
+        "Purchase Invoice",
+        "Purchase Invoice Item",
+        "Purchase Order",
+        "Purchase Order Item",
+        "Purchase Receipt",
+        "Purchase Receipt Item",
+        "Supplier",
+        "Item",
+        "Company"
+      ],
+      "routing_examples": [
+        "Which are the highest expenses (Purchase Invoice) this month for Company X?",
+        "Top 10 purchase invoices by amount this quarter",
+        "Who are our top suppliers by purchase amount this year?",
+        "Total purchases this month compared with last month",
+        "Show open Purchase Orders for a supplier"
+      ],
+      "routing_priority": 5,
+      "writes": null,
+      "timeout_s": 900,
+      "min_apps": [
+        "erpnext"
+      ],
+      "instruction_profile": "table-comparison-output"
     }
   ]
 }

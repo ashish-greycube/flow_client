@@ -8,6 +8,7 @@ from collections.abc import Generator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+import frappe
 from frappe import _
 
 from flow.lib.model import ChatResponse, Model, ToolCall, ToolCallBegin
@@ -397,7 +398,20 @@ class Agent:
 		try:
 			return tool(**call.arguments)
 		except Exception as e:
-			return json.dumps({"error": str(e)[:ERROR_MESSAGE_LIMIT]})
+			return json.dumps(error_payload(e, str(e)[:ERROR_MESSAGE_LIMIT]))
+
+
+def is_permission_error(e: Exception) -> bool:
+	"""A refused access check (frappe's or the builtin), not any other tool failure."""
+	return isinstance(e, (frappe.PermissionError, PermissionError))
+
+
+def error_payload(e: Exception, message: str) -> dict[str, Any]:
+	"""A tool error the UI can tell apart: `permission_denied` marks a refused access check."""
+	payload: dict[str, Any] = {"error": message}
+	if is_permission_error(e):
+		payload["permission_denied"] = True
+	return payload
 
 
 def _validate_messages(messages: Any) -> None:

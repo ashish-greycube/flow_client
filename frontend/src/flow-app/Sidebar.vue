@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import BrandMark from "@/components/BrandMark.vue";
 import SearchInput from "@/components/SearchInput.vue";
 import { FeatherIcon } from "@/lib/ui";
 import { useStore } from "@/store";
@@ -161,8 +160,7 @@ function readCollapsed() {
 			class="flex h-12 shrink-0 items-center gap-2"
 			:class="collapsed ? 'justify-center px-2' : 'px-3'"
 		>
-			<BrandMark :size="40" />
-			<span v-if="!collapsed" class="flow-sidebar-title text-[20px] font-bold text-ink-gray-9">{{
+			<span v-if="!collapsed" class="flow-sidebar-title text-[18px] font-bold text-ink-gray-9">{{
 				__("Flow.ai")
 			}}</span>
 		</div>

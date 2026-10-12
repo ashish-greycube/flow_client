@@ -70,6 +70,13 @@ const breadcrumbs = computed(() => [
 	{ label: entry.value?.file_name || props.name, route: { name: "file2erp-detail", params: { name: props.name } } },
 ]);
 const editable = computed(() => !!entry.value && entry.value.status !== "Document Created");
+// True from the moment Extract / Re-extract is clicked until the background job lands
+// its result — the fields and line items on screen are about to be replaced, so
+// editing them or creating a document from them in the meantime would be lost or
+// stale.
+const busy = computed(
+	() => extracting.value || awaitingExtraction.value || PENDING_STATUSES.has(entry.value?.status),
+);
 
 // Compared against JS-side JSON.stringify snapshots taken right after load/save, not
 // the raw backend string — Python's json.dumps and JS's JSON.stringify don't agree on
@@ -88,6 +95,7 @@ const dirty = computed(() => {
 let pollTimer = null;
 
 async function load() {
+	const wasBusy = busy.value;
 	entry.value = await getFile2ERPEntry(props.name);
 	fields.value = entry.value.extracted_fields ? JSON.parse(entry.value.extracted_fields) : {};
 	lineItems.value = entry.value.extracted_line_items ? JSON.parse(entry.value.extracted_line_items) : [];
@@ -98,6 +106,19 @@ async function load() {
 	if (entry.value.status !== "Uploaded") awaitingExtraction.value = false;
 	if (PENDING_STATUSES.has(entry.value.status) || awaitingExtraction.value) {
 		pollTimer = setTimeout(load, 3000);
+	} else if (wasBusy) {
+		notifyExtractionResult();
+	}
+}
+
+function notifyExtractionResult() {
+	const status = entry.value.status;
+	if (status === "Extracted") {
+		frappe.show_alert({ message: __("Extraction complete — review the data below."), indicator: "green" }, 7);
+	} else if (status === "Needs Review") {
+		frappe.show_alert({ message: __("Extraction finished, but some data needs your review."), indicator: "orange" }, 7);
+	} else if (status === "Failed") {
+		frappe.show_alert({ message: __("Extraction failed. See the error below."), indicator: "red" }, 7);
 	}
 }
 
@@ -115,6 +136,10 @@ async function startExtractionClick(force = false) {
 	awaitingExtraction.value = true;
 	try {
 		mergeEntry(await startExtraction(props.name, documentType.value, force));
+		frappe.show_alert({
+			message: __("Extracting {0} data from {1}…", [documentType.value, entry.value.file_name || props.name]),
+			indicator: "blue",
+		});
 		if (pollTimer) clearTimeout(pollTimer);
 		pollTimer = setTimeout(load, 1500);
 	} catch (e) {
@@ -291,7 +316,7 @@ async function deleteEntry() {
 					<template #prefix><FeatherIcon name="message-circle" class="h-3.5 w-3.5" /></template>
 					{{ __("Open Chat") }}
 				</Button>
-				<Button variant="subtle" :loading="saving" :disabled="!editable || !dirty" @click="save">
+				<Button variant="subtle" :loading="saving" :disabled="!editable || busy || !dirty" @click="save">
 					{{ __("Save") }}
 				</Button>
 				<button
@@ -348,9 +373,25 @@ async function deleteEntry() {
 				</div>
 
 				<template v-else>
-					<div v-if="PENDING_STATUSES.has(entry.status) || awaitingExtraction" class="flex items-center gap-2 text-sm text-ink-gray-5">
-						<Spinner class="h-4 w-4" />
-						{{ __("Extracting…") }}
+					<div
+						v-if="busy"
+						class="flex items-start gap-3 rounded-lg border border-outline-blue-1 bg-surface-blue-1 px-4 py-3"
+						role="status"
+						aria-live="polite"
+					>
+						<Spinner class="mt-0.5 h-4 w-4 shrink-0 text-ink-blue-3" />
+						<div class="text-sm">
+							<p class="font-medium text-ink-blue-3">
+								{{ __("Extracting {0} data…", [entry.document_type || documentType]) }}
+							</p>
+							<p class="mt-0.5 text-ink-gray-6">
+								{{
+									__(
+										"Reading the file and filling in the fields. This usually takes under a minute — Create and editing are paused until it finishes.",
+									)
+								}}
+							</p>
+						</div>
 					</div>
 					<div v-if="entry.error" class="rounded-lg border border-outline-red-2 bg-surface-red-1 px-3 py-2 text-sm text-ink-red-4">
 						{{ entry.error }}
@@ -374,10 +415,10 @@ async function deleteEntry() {
 							v-model="targetDoctype"
 							:label="__('Create Document')"
 							:placeholder="__('e.g. Sales Invoice')"
-							:disabled="!editable"
+							:disabled="!editable || busy"
 							class="flex-1"
 						/>
-						<Button variant="solid" :loading="creating" :disabled="!editable" @click="confirmCreate">
+						<Button variant="solid" :loading="creating" :disabled="!editable || busy" @click="confirmCreate">
 							{{ __("Create") }}
 						</Button>
 					</section>
@@ -387,7 +428,7 @@ async function deleteEntry() {
 						<EditableKeyValueTable
 							v-model="fields"
 							:reset-key="entry.name + entry.modified"
-							:disabled="!editable"
+							:disabled="!editable || busy"
 						/>
 					</section>
 
@@ -396,7 +437,7 @@ async function deleteEntry() {
 						<EditableRowsTable
 							v-model="lineItems"
 							:reset-key="entry.name + entry.modified"
-							:disabled="!editable"
+							:disabled="!editable || busy"
 						/>
 					</section>
 

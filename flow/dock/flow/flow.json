@@ -1,0 +1,24 @@
+{
+ "app": "flow",
+ "creation": "2026-10-12 11:19:28.114532",
+ "docstatus": 0,
+ "doctype": "Dock",
+ "idx": 0,
+ "items": [
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "bot",
+   "link_to": "Flow",
+   "link_type": "Sidebar",
+   "title": "Flow"
+  }
+ ],
+ "modified": "2026-10-12 11:26:05.042761",
+ "modified_by": "Administrator",
+ "mount_on": "flow",
+ "name": "flow",
+ "owner": "Administrator",
+ "standard": 1,
+ "user": ""
+}

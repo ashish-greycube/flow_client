@@ -89,12 +89,18 @@ export function toolError(result) {
 	return null;
 }
 
-// A failed tool call whose error reads as an access/permission problem, rather
-// than any other failure (validation, not found, network, …) — these get a
-// louder danger treatment in the UI since the fix is usually "ask an admin",
-// not "try again".
-export function isPermissionError(message) {
-	return typeof message === "string" && /permission|not permitted|not allowed|forbidden/i.test(message);
+// A failed tool call the server marked as a refused access check
+// (`permission_denied`, set only for frappe.PermissionError / PermissionError),
+// rather than any other failure (validation, sandbox, not found, network, …).
+// These get a louder danger treatment in the UI since the fix is usually
+// "ask an admin", not "try again". Takes the raw tool result, like toolError.
+export function isPermissionError(result) {
+	if (toolError(result) === null) return false;
+	const parsed = JSON.parse(result);
+	if (parsed.permission_denied === true) return true;
+	return (
+		Array.isArray(parsed.failures) && parsed.failures.some((f) => f && f.permission_denied === true)
+	);
 }
 
 // create_chart's payload: {chart: {kind: "axis"|"donut"|"funnel"|"number", config}}.

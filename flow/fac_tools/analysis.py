@@ -228,9 +228,9 @@ def _pearson(pairs: list[tuple[float, float]]) -> float:
 def _validate_select(query: str) -> str:
 	clean = re.sub(r"--[^\n]*|/\*.*?\*/", " ", query, flags=re.DOTALL).strip().rstrip(";")
 	if not clean.lower().startswith(("select ", "with ")) or FORBIDDEN_SQL.search(clean):
-		raise frappe.PermissionError("Only one read-only SELECT query is allowed")
+		raise frappe.ValidationError("Only one read-only SELECT query is allowed")
 	if ";" in clean:
-		raise frappe.PermissionError("Multiple SQL statements are not allowed")
+		raise frappe.ValidationError("Multiple SQL statements are not allowed")
 	return clean
 
 

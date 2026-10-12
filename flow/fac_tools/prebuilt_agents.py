@@ -63,6 +63,8 @@ def _sync_agent(specification: dict[str, Any], model_name: str) -> None:
 		"routing_description": specification["description"],
 		"routing_doctypes": json.dumps(specification["doctypes_required"]),
 		"routing_domain": specification["domain"],
+		"routing_examples": "\n".join(specification.get("routing_examples") or []),
+		"routing_priority": specification.get("routing_priority") or 0,
 		"tools": [{"tool": name} for name in _tool_names(specification)],
 		"enabled": int(specification["status"] == "Published" and compatible),
 		"is_system_generated": 1,
@@ -82,6 +84,11 @@ def _sync_agent(specification: dict[str, Any], model_name: str) -> None:
 	doc.routing_description = values["routing_description"]
 	doc.routing_doctypes = values["routing_doctypes"]
 	doc.routing_domain = values["routing_domain"]
+	# Only catalog entries that declare examples or a priority own those fields.
+	if "routing_examples" in specification:
+		doc.routing_examples = values["routing_examples"]
+	if "routing_priority" in specification:
+		doc.routing_priority = values["routing_priority"]
 	# Never switch an agent on here, but switch it off when the site can no longer run it.
 	if not compatible:
 		doc.enabled = 0

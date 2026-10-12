@@ -23,7 +23,7 @@ const active = computed(
 const label = computed(() => toolLabel(props.part.name));
 const context = computed(() => toolContext(props.part.arguments));
 const error = computed(() => toolError(props.part.result));
-const danger = computed(() => Boolean(error.value) && isPermissionError(error.value));
+const danger = computed(() => isPermissionError(props.part.result));
 const expandable = computed(() => hasArgs(props.part.arguments) || Boolean(error.value));
 const blockKeys = computed(() => blockKeysFor(props.part.name));
 

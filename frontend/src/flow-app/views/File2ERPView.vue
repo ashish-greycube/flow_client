@@ -14,6 +14,9 @@ const entries = ref([]);
 const query = ref("");
 const dragging = ref(false);
 const uploading = ref(false);
+// What the upload banner shows while a batch is in flight: which file (of how many)
+// and which step — sending the bytes, then registering the File2ERP entry.
+const uploadProgress = ref({ index: 0, total: 0, fileName: "", step: "" });
 const fileInput = ref(null);
 
 // Backend (flow/boot.py) is the single source of truth for supported file types.
@@ -42,6 +45,23 @@ async function load() {
 	schedulePoll();
 }
 
+// Extraction runs in a background job; tell the user when one they're watching from
+// this list finishes, so they don't have to keep an eye on the status column.
+function notifyFinished(previous, current) {
+	const wasPending = new Set(previous.filter((e) => PENDING_STATUSES.has(e.status)).map((e) => e.name));
+	for (const entry of current) {
+		if (!wasPending.has(entry.name) || PENDING_STATUSES.has(entry.status)) continue;
+		const name = entry.file_name || entry.name;
+		if (entry.status === "Failed") {
+			frappe.show_alert({ message: __("Extraction failed for {0}.", [name]), indicator: "red" }, 7);
+		} else if (entry.status === "Needs Review") {
+			frappe.show_alert({ message: __("{0} extracted — needs review.", [name]), indicator: "orange" }, 7);
+		} else {
+			frappe.show_alert({ message: __("{0} extracted.", [name]), indicator: "green" }, 7);
+		}
+	}
+}
+
 onMounted(async () => {
 	try {
 		await load();
@@ -61,7 +81,9 @@ function schedulePoll() {
 	if (pollTimer) clearTimeout(pollTimer);
 	if (!entries.value.some((e) => PENDING_STATUSES.has(e.status))) return;
 	pollTimer = setTimeout(async () => {
+		const previous = entries.value;
 		entries.value = await listFile2ERPEntries();
+		notifyFinished(previous, entries.value);
 		schedulePoll();
 	}, 3000);
 }
@@ -78,9 +100,11 @@ async function handleFiles(fileList) {
 	uploading.value = true;
 	const created = [];
 	try {
-		for (const file of files) {
+		for (const [index, file] of files.entries()) {
+			uploadProgress.value = { index: index + 1, total: files.length, fileName: file.name, step: "upload" };
 			try {
 				const uploaded = await uploadFile(file);
+				uploadProgress.value = { ...uploadProgress.value, step: "register" };
 				const entry = await createFile2ERPEntry(uploaded.name);
 				entries.value.unshift(entry);
 				created.push(entry);
@@ -92,6 +116,15 @@ async function handleFiles(fileList) {
 			}
 		}
 		schedulePoll();
+		if (created.length) {
+			frappe.show_alert({
+				message:
+					created.length === 1
+						? __("Uploaded {0}. Choose a Document Type to extract its data.", [created[0].file_name])
+						: __("Uploaded {0} files. Open each one to choose its Document Type and extract.", [created.length]),
+				indicator: "green",
+			});
+		}
 		// A single upload goes straight to its detail page to pick/confirm the Document
 		// Type and start extraction — the whole point of showing that page at all. A
 		// batch drop can't jump to more than one page at once, so it stays on the list;
@@ -165,6 +198,25 @@ function formatSize(bytes) {
 			/>
 		</header>
 
+		<div
+			v-if="uploading"
+			class="mx-6 mt-4 flex items-center gap-3 rounded-lg border border-outline-blue-1 bg-surface-blue-1 px-4 py-3 text-sm"
+			role="status"
+			aria-live="polite"
+		>
+			<Spinner class="h-4 w-4 shrink-0 text-ink-blue-3" />
+			<span class="min-w-0 truncate text-ink-blue-3">
+				<span v-if="uploadProgress.total > 1" class="font-medium">
+					{{ __("{0} of {1}:", [uploadProgress.index, uploadProgress.total]) }}
+				</span>
+				{{
+					uploadProgress.step === "register"
+						? __("Preparing {0}…", [uploadProgress.fileName])
+						: __("Uploading {0}…", [uploadProgress.fileName])
+				}}
+			</span>
+		</div>
+
 		<div class="px-6 py-4">
 			<SearchInput
 				v-model="query"
@@ -228,11 +280,17 @@ function formatSize(bytes) {
 							</td>
 							<td class="px-3 py-2 text-ink-gray-6">{{ entry.file_type }}</td>
 							<td class="px-3 py-2">
-								<Badge
-									variant="subtle"
-									:theme="STATUS_THEME[entry.status] || 'gray'"
-									:label="__(entry.status)"
-								/>
+								<div class="flex items-center gap-1.5">
+									<Spinner
+										v-if="PENDING_STATUSES.has(entry.status)"
+										class="h-3.5 w-3.5 text-ink-blue-3"
+									/>
+									<Badge
+										variant="subtle"
+										:theme="STATUS_THEME[entry.status] || 'gray'"
+										:label="__(entry.status)"
+									/>
+								</div>
 							</td>
 							<td class="px-3 py-2 text-ink-gray-6">{{ entry.document_type || "—" }}</td>
 							<td class="px-3 py-2 text-ink-gray-6">{{ formatSize(entry.file_size) }}</td>

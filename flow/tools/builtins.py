@@ -9,6 +9,7 @@ from typing import Any, Literal
 import frappe
 from frappe import _
 
+from flow.lib.agent import error_payload
 from flow.lib.tool import Tool, tool
 from flow.utils.safe_exec import safe_exec
 
@@ -361,7 +362,7 @@ def create(doctype: str, records: list[dict[str, Any]]) -> dict[str, Any]:
 			doc.insert()
 			created.append(doc.name)
 		except Exception as e:
-			failures.append({"row": row, "error": _error_text(e)})
+			failures.append({"row": row, **error_payload(e, _error_text(e))})
 
 	result: dict[str, Any] = {"doctype": doctype, "created": created}
 	if failures:
@@ -456,7 +457,7 @@ def update(doctype: str, names: list[str], values: dict[str, Any]) -> dict[str, 
 			doc.save()
 			updated.append(doc.name)
 		except Exception as e:
-			failures.append({"name": name, "error": _error_text(e)})
+			failures.append({"name": name, **error_payload(e, _error_text(e))})
 
 	result: dict[str, Any] = {"doctype": doctype, "updated": updated}
 	if failures:
@@ -485,7 +486,7 @@ def delete(doctype: str, names: list[str]) -> dict[str, Any]:
 			frappe.delete_doc(doctype, name, ignore_missing=False)
 			deleted.append(name)
 		except Exception as e:
-			failures.append({"name": name, "error": _error_text(e)})
+			failures.append({"name": name, **error_payload(e, _error_text(e))})
 
 	result: dict[str, Any] = {"doctype": doctype, "deleted": deleted}
 	if failures:
@@ -527,7 +528,7 @@ def run_action(
 		try:
 			results.append({"name": name, "result": _apply_action(doctype, name, action, args)})
 		except Exception as e:
-			failures.append({"name": name, "error": _error_text(e)})
+			failures.append({"name": name, **error_payload(e, _error_text(e))})
 
 	result: dict[str, Any] = {"action": action, "results": results}
 	if failures:

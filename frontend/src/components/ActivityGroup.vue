@@ -44,7 +44,7 @@ const failedParts = computed(() =>
 // Insufficient-permission failures get a louder red treatment (border + icon)
 // instead of the default muted "Failed" text — the fix is usually "ask an
 // admin", so it shouldn't read the same as a step still quietly finishing up.
-const danger = computed(() => failedParts.value.some(isPermissionError));
+const danger = computed(() => props.parts.some((p) => isPermissionError(p.result)));
 
 // Only set on a resolved approval or failed line. A permission failure says so
 // directly in the collapsed line — "Insufficient permission" instead of a bare

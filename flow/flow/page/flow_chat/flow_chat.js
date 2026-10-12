@@ -64,6 +64,15 @@ function ensureImmersiveStyle() {
 			height: 100dvh !important;
 			overflow: hidden !important;
 		}
+		/* A pinned desk dock is an in-flow column at the window's left edge (Frappe's
+		   dock.scss: --dock-width plus a 1px border); start this fixed, full-window
+		   layer beside it instead of over it. A floating dock still slides in over the
+		   page from the edge, the same as on every other desk page. */
+		body.dock-pinned .page-container[data-page-route="flow-chat"] #flow-chat-root,
+		body.dock-pinned .page-container[data-page-route="flow-chat"] #flow-root {
+			left: calc(var(--dock-width, 56px) + 1px) !important;
+			width: auto !important;
+		}
 	`;
 	document.head.appendChild(style);
 }

@@ -35,7 +35,7 @@ class TestFACToolDefinitions(UnitTestCase):
 			"SELECT name FROM `tabUser`; SELECT name FROM `tabRole`",
 			"WITH changed AS (DELETE FROM `tabUser` RETURNING name) SELECT * FROM changed",
 		):
-			with self.assertRaises(frappe.PermissionError):
+			with self.assertRaises(frappe.ValidationError):
 				_validate_select(query)
 
 	def test_report_filter_discovery_handles_dynamic_defaults_and_select_values(self):
