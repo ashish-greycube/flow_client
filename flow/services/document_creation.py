@@ -48,6 +48,12 @@ def create_from_mapped(
 		if info:
 			child_meta = frappe.get_meta(info[1])
 			line_items = [_normalize_date_fields(_only_real_fields(row, child_meta), child_meta) for row in line_items]
+		if doctype == "Expense Claim":
+			# The Expense Claim form copies each row's amount into sanctioned_amount in the
+			# browser; a server-side insert never runs that, so do the same here.
+			for row in line_items:
+				if not row.get("sanctioned_amount") and row.get("amount") not in (None, ""):
+					row["sanctioned_amount"] = row["amount"]
 		values[fieldname] = line_items
 
 	return create(doctype=doctype, records=[values])
