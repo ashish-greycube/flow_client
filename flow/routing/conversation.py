@@ -93,22 +93,29 @@ def get_chat(name: str) -> dict[str, Any]:
 		"agent_session": active.name,
 		"messages": messages,
 		"attachments": attachments,
-		"run_errors": _failed_run_errors(run_names),
+		**_run_details(run_names),
 	}
 
 
-def _failed_run_errors(run_names: set[str]) -> dict[str, str]:
-	"""Map run name -> its stored error, for runs that failed. A turn whose stream died
-	mid-flight leaves no assistant reply in the transcript; this lets the client show the
-	real reason instead of a generic "interrupted" placeholder."""
+def _run_details(run_names: set[str]) -> dict[str, dict[str, Any]]:
+	"""Per-run details the transcript does not carry:
+
+	- run_errors: run name -> stored error, for runs that failed. A turn whose stream died
+	  mid-flight leaves no assistant reply in the transcript; this lets the client show the
+	  real reason instead of a generic "interrupted" placeholder.
+	- run_durations: run name -> milliseconds worked, for runs that recorded it, so a
+	  reloaded chat shows each reply's time as the live timer did."""
 	if not run_names:
-		return {}
+		return {"run_errors": {}, "run_durations": {}}
 	rows = frappe.get_all(
 		"Flow Run",
-		filters={"name": ["in", list(run_names)], "status": "Failed"},
-		fields=["name", "error"],
+		filters={"name": ["in", list(run_names)]},
+		fields=["name", "status", "error", "duration_ms"],
 	)
-	return {row.name: row.error for row in rows if row.error}
+	return {
+		"run_errors": {row.name: row.error for row in rows if row.status == "Failed" and row.error},
+		"run_durations": {row.name: row.duration_ms for row in rows if row.duration_ms},
+	}
 
 
 def chat_history(query: str | None = None) -> list[dict[str, Any]]:

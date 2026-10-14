@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import contextvars
 import json
 import re
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any
 
@@ -17,6 +19,25 @@ MIN_CONFIDENCE = 0.75
 MAX_REASON_LENGTH = 240
 DETERMINISTIC_SCORE = 6
 DETERMINISTIC_MARGIN = 3
+# Seconds the routing classifier may take before the request falls back to Flow.
+ROUTING_TIMEOUT = 10
+# Reports, statements, totals and analysis: Flow has every report, query, chart and export
+# tool, while specialists are scoped audits, so these skip the classifier.
+REPORT_REQUEST = re.compile(
+	r"\b(?:reports?|statements?|p\s*&\s*l|pnl|profit\s+(?:and|&)\s+loss|balance\s+sheet|"
+	r"trial\s+balance|cash\s*flow|general\s+ledger|totals?|sum|summar(?:y|ies|ise|ize)|"
+	r"top\s+\d+|compar(?:e|ison)|vs|versus|trends?|month[-\s]?wise|monthly|quarterly|yearly|"
+	r"year[-\s]?wise|charts?|graphs?|analy(?:sis|se|ze|tics)|breakdown|how\s+(?:much|many)|"
+	r"kpis?|dashboards?|rank(?:ing)?|rate|growth|average)\b",
+	re.IGNORECASE,
+)
+# A request that also acts, or asks for an audit, is a specialist's job: leave it to routing.
+ACTION_REQUEST = re.compile(
+	r"\b(?:create|submit|cancel|amend|update|edit|delete|remove|send|e-?mail|notify|remind|"
+	r"assign|approve|reject|reconcile|pay|import|upload|schedule|audit|flag)\b",
+	re.IGNORECASE,
+)
+NAMED_AGENT = re.compile(r"\b(?:agent|auditor|operator|worklist)\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -49,17 +70,43 @@ def select_agent(
 				"The user attached files without instructions; route to the OCR Agent.",
 			)
 
+	if _is_report_request(input):
+		return RoutingDecision(
+			_action(ASSISTANT_AGENT_TITLE, current_agent), ASSISTANT_AGENT_TITLE, 1.0,
+			"Reports, statements, totals and analysis are handled by Flow, which has every report tool.",
+		)
+
 	deterministic = _deterministic_choice(input, candidates, current_agent)
 	if deterministic:
 		return deterministic
 
 	try:
 		model_name = _routing_model(model, current_agent, candidates)
-		response = Model(model_name).chat(_routing_messages(input, context, current_agent, candidates))
+		response = _classify(model_name, _routing_messages(input, context, current_agent, candidates))
 		payload = _parse_json(response.content or "")
 	except Exception:
 		return _unavailable(current_agent, candidates)
 	return _validated_decision(payload, candidates, current_agent)
+
+
+def _is_report_request(input: str) -> bool:
+	"""A request for a report or figures that does not act and names no specialist."""
+	return bool(
+		REPORT_REQUEST.search(input) and not ACTION_REQUEST.search(input) and not NAMED_AGENT.search(input)
+	)
+
+
+def _classify(model_name: str, messages: list[dict[str, str]]):
+	"""Call the routing model, giving up after ROUTING_TIMEOUT seconds in all. The model's
+	own timeout is per read, so a provider that keeps a slow request alive could otherwise
+	hold the user for minutes; the call left running ends at that read timeout."""
+	model = Model(model_name, timeout=ROUTING_TIMEOUT)
+	pool = ThreadPoolExecutor(max_workers=1)
+	try:
+		future = pool.submit(contextvars.copy_context().run, model.chat, messages)
+		return future.result(timeout=ROUTING_TIMEOUT)
+	finally:
+		pool.shutdown(wait=False)
 
 
 def _routing_candidates() -> list[dict[str, Any]]:
@@ -153,7 +200,9 @@ def _normalize_text(text: str) -> str:
 def _routing_model(
 	model: str | None, current_agent: str | None, candidates: list[dict[str, Any]]
 ) -> str:
-	model_name = model
+	# A model set for routing alone (Flow Settings) wins: routing needs a fast model, not
+	# the agent's, which may think for a minute before naming an agent.
+	model_name = _settings_routing_model() or model
 	if not model_name and current_agent:
 		current_model = frappe.db.get_value("Flow Agent", current_agent, "model")
 		if current_model:
@@ -165,6 +214,13 @@ def _routing_model(
 	if not frappe.db.get_value("Flow Model", model_name, "enabled"):
 		raise ValueError(f"Flow Model {model_name!r} is disabled")
 	return model_name
+
+
+def _settings_routing_model() -> str | None:
+	name = frappe.db.get_single_value("Flow Settings", "routing_model", cache=True)
+	if name and frappe.db.get_value("Flow Model", name, "enabled"):
+		return name
+	return None
 
 
 def _routing_messages(

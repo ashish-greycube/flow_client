@@ -14,6 +14,7 @@ class FlowSettings(Document):
 		from frappe.types import DF
 
 		chat_run_mode: DF.Literal["Background Job", "In Request"]
+		routing_model: DF.Link | None
 	# end: auto-generated types
 
 	pass

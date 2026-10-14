@@ -12,6 +12,7 @@ import frappe
 from frappe import _
 
 from flow.lib.model import ChatResponse, Model, ToolCall, ToolCallBegin
+from flow.lib.result_budget import fit_result
 from flow.lib.tool import Tool
 
 if TYPE_CHECKING:
@@ -472,7 +473,7 @@ def _serialize_tool_result(result: Any) -> str:
 	if result is None:
 		return ""
 	try:
-		return json.dumps(result, default=str)
+		return json.dumps(fit_result(result), default=str)
 	except (TypeError, ValueError):
 		return str(result)
 

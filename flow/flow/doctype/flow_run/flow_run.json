@@ -13,6 +13,8 @@
   "column_break_meta",
   "status",
   "iterations",
+  "duration_ms",
+  "active_since",
   "routing_action",
   "routing_confidence",
   "routing_reason",
@@ -100,6 +102,21 @@
    "fieldtype": "Int",
    "label": "Iterations",
    "non_negative": 1
+  },
+  {
+   "description": "Time the run spent working, from the moment the message was sent to its reply, in milliseconds. Time waiting for an approval is not counted. The chat shows this after a reload.",
+   "fieldname": "duration_ms",
+   "fieldtype": "Int",
+   "label": "Duration (ms)",
+   "read_only": 1
+  },
+  {
+   "description": "Start of the stretch the run is working in now; empty while it is paused or finished.",
+   "fieldname": "active_since",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "label": "Active Since",
+   "read_only": 1
   },
   {
    "description": "Per-turn automatic-routing decision.",
@@ -231,7 +248,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-05-23 00:00:00",
+ "modified": "2026-10-14 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Flow",
  "name": "Flow Run",

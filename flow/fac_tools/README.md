@@ -14,6 +14,20 @@ The package does not change `flow.tools.builtins`. The `after_migrate` hook call
 - Files: `extract_file_content`
 - Dashboards: `create_dashboard`, `create_dashboard_chart`, and `list_user_dashboards`
 
+## Report execution
+
+`generate_report` handles heavy reports the way Jarvis's `run_report` does:
+
+- A report flagged **Prepared Report** runs in Frappe's background job (`long` queue). The tool returns a `status`: `ready` (a completed run for the same user and filters, reused with its `as_of` time), `generating`, `started`, or `failed`. Asking again with the same filters returns the stored run without running the report again. Filters are matched on meaning, so runs started from Desk are reused too.
+- Other reports run inline, and each query may run for at most `INLINE_QUERY_TIMEOUT` seconds. A report that takes longer is flagged as prepared (unless its "Disable Prepared Report Automation" setting is checked), and a background run starts.
+- Flow runs the whole agent turn inside one job, which keeps a worker busy. A background run is only started when an **idle** worker listens on the `long` queue. Otherwise the report runs inline, because a queued run would not start until the turn ended.
+- A started or in-flight run is waited on for up to `WAIT_SECONDS` (45s). This happens once per turn for the same report and filters. A later call in the same turn returns immediately, and its message tells the model to stop polling and tell the user.
+- A failed run returns the reason from its traceback (for example "From Date and To Date are mandatory"), so the model can fix the filters.
+- Filter discovery also reads filters that a report copies from a shared builder (ERPNext's `financial_statements.js`, used by P&L, Balance Sheet, Cash Flow and others) and filters it adds with `filters.push(...)`. A `mandatory_depends_on` condition is returned as `required_when`, and `apply_defaults` enforces simple `doc.field == 'value'` conditions.
+- `column_totals` sums the Currency, Float, and Int columns over all rows. It is omitted for tree reports, and Currency columns are skipped when rows mix currencies.
+
+The agent loop also caps every tool result at about 35K characters (`flow.lib.result_budget`). An oversized row list is cut, and a note says the result is partial.
+
 Flow already provides equivalent document, metadata, workflow-action, knowledge-search, and sandbox tools. This package does not duplicate those tools.
 
 Write tools use Flow's confirmation gate. All data tools check Frappe permissions before they return or change data.

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 import frappe
@@ -159,6 +160,7 @@ class FlowSession(Document):
 		routing_action: str | None = None,
 		routing_confidence: float | None = None,
 		routing_reason: str | None = None,
+		started_at: datetime | None = None,
 	) -> FlowRun | Generator[Event]:
 		"""Run one turn and persist it as a Flow Run. `attachments` are File names whose text
 		is injected into this turn's prompt. With `stream=True`, returns an event generator.
@@ -178,6 +180,7 @@ class FlowSession(Document):
 			routing_action=routing_action,
 			routing_confidence=routing_confidence,
 			routing_reason=routing_reason,
+			started_at=started_at,
 		)
 		runtime = self._runtime
 		run_input = self._build_prompt_messages()
@@ -222,6 +225,7 @@ class FlowSession(Document):
 		routing_action: str | None = None,
 		routing_confidence: float | None = None,
 		routing_reason: str | None = None,
+		started_at: datetime | None = None,
 	) -> FlowRun:
 		"""Record a turn without running it: create the Running Flow Run and persist the user
 		message and attachments. `chat` runs it inline; a background job runs it later with
@@ -260,6 +264,7 @@ class FlowSession(Document):
 			routing_action=routing_action,
 			routing_confidence=routing_confidence,
 			routing_reason=routing_reason,
+			started_at=started_at,
 		)
 		self._persist_turn(input, attachment_data, run.name)
 		self._index_retrieval_attachments(run.name, {d["file"]: d["extracted_text"] for d in attachment_data})
@@ -394,6 +399,7 @@ class FlowSession(Document):
 
 		# A paused run from the Skills rollout resumes with its base agent only.
 		runtime = self._runtime
+		run.start_clock()
 		_set_active_run(run.name)
 		if stream:
 			return stream_with_persistence(lambda: runtime.resume(messages, answers, stream=True), run)

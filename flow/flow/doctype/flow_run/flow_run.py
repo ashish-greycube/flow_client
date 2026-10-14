@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Generator
+from datetime import datetime
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -49,7 +50,9 @@ class FlowRun(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		active_since: DF.Datetime | None
 		config_snapshot: DF.JSON | None
+		duration_ms: DF.Int
 		error: DF.LongText | None
 		feedback_comment: DF.SmallText | None
 		feedback_rating: DF.Literal["", "Up", "Down"]
@@ -107,6 +110,8 @@ class FlowRun(Document):
 
 		self.status = _status_from_result(result)
 		self.iterations = (self.iterations or 0) + result.iterations
+		# Completed, Failed or Paused for an approval: the working stretch ends either way.
+		self.stop_clock()
 		references = collect_document_references(result.messages)
 		output = linkify_document_mentions(result.output, references)
 		# The model finished without producing anything: no text and no tool calls. Say so
@@ -138,7 +143,19 @@ class FlowRun(Document):
 		"""Mark a run as failed with the given error message."""
 		self.status = "Failed"
 		self.error = str(error)[:5000]
+		self.stop_clock()
 		self.save(ignore_permissions=True)
+
+	def start_clock(self) -> None:
+		"""A paused run resumes working: time from now counts again. Saved directly, since a
+		resumed run keeps its Paused status until its result is applied."""
+		self.db_set("active_since", frappe.utils.now_datetime(), update_modified=False)
+
+	def stop_clock(self) -> None:
+		"""Add the current working stretch to duration_ms. Waits for an approval fall
+		between stretches, so they are not counted, as in the chat's live timer."""
+		self.duration_ms = elapsed_ms(self.duration_ms, self.active_since)
+		self.active_since = None
 
 
 def create_run(
@@ -154,9 +171,12 @@ def create_run(
 	routing_action: str | None = None,
 	routing_confidence: float | None = None,
 	routing_reason: str | None = None,
+	started_at: datetime | None = None,
 ) -> FlowRun:
 	"""Create a new Flow Run row in the Running state. `session` is required — every run
-	belongs to a Flow Session (which carries the transcript and agent linkage)."""
+	belongs to a Flow Session (which carries the transcript and agent linkage).
+	`started_at` is when the user sent the message, so the run's duration includes routing
+	and matches the chat's live timer; it defaults to now."""
 	doc = frappe.get_doc(
 		{
 			"doctype": "Flow Run",
@@ -172,9 +192,18 @@ def create_run(
 			"routing_reason": routing_reason,
 			"config_snapshot": _dump_json(config_snapshot) if config_snapshot else None,
 			"status": "Running",
+			"active_since": started_at or frappe.utils.now_datetime(),
 		}
 	).insert(ignore_permissions=True)
 	return doc
+
+
+def elapsed_ms(duration_ms: int | None, active_since: datetime | str | None) -> int | None:
+	"""`duration_ms` plus the working stretch running since `active_since`, if any."""
+	if not active_since:
+		return duration_ms
+	stretch = frappe.utils.now_datetime() - frappe.utils.get_datetime(active_since)
+	return (duration_ms or 0) + max(0, int(stretch.total_seconds() * 1000))
 
 
 def persist_result(

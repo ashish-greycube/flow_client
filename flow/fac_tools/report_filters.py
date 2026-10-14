@@ -11,22 +11,68 @@ import frappe
 from frappe.utils import add_months, today
 
 _STRING = r'["\'`]((?:[^"\'`\\]|\\.)*)["\'`]'
+# A filters array: `filters: [` in a report object, or `let filters = [` in a shared builder.
+_FILTERS_ARRAY = re.compile(r"\bfilters\s*[:=]\s*\[")
+# Filters a report adds to a shared set: `frappe.query_reports[name]["filters"].push(`.
+_FILTERS_PUSH = re.compile(r"""(?:\[\s*["']filters["']\s*\]|\.filters)\s*\.push\s*\(""")
+# Shared filter builders that reports copy in with `$.extend({}, <object>)`, by the object
+# the report script names and the file (app, path) that defines its filters.
+SHARED_FILTER_SCRIPTS = {
+	"erpnext.financial_statements": ("erpnext", "public/js/financial_statements.js"),
+}
 
 
 def discover_filters(report_name: str) -> tuple[list[dict[str, Any]], list[str]]:
-	"""Extract the common declarative query-report filter syntax from rendered JS."""
+	"""Extract the common declarative query-report filter syntax from rendered JS: the
+	report's own filters array, the filters of a shared builder it copies in (such as
+	ERPNext's financial statements), and the filters it pushes onto them."""
 	from frappe.desk.query_report import get_script
 
 	script = get_script(report_name).get("script") or ""
-	match = re.search(r"\bfilters\s*:\s*\[", script)
-	if not match:
+	filters = _array_filters(script) + _shared_filters(script) + _pushed_filters(script)
+	if not filters:
 		return [], ["No declarative filters array was found in the report script."]
+	unique = {}
+	for definition in filters:
+		unique.setdefault(definition["fieldname"], definition)
+	return list(unique.values()), []
+
+
+def _array_filters(script: str) -> list[dict[str, Any]]:
+	match = _FILTERS_ARRAY.search(script)
+	if not match:
+		return []
 	start = script.find("[", match.start())
 	end = _matching(script, start, "[", "]")
-	if end < 0:
-		return [], ["The report filters array could not be parsed."]
+	return _definitions(script[start + 1 : end]) if end > 0 else []
+
+
+def _shared_filters(script: str) -> list[dict[str, Any]]:
 	filters = []
-	for block in _object_blocks(script[start + 1 : end]):
+	for name, (app, path) in SHARED_FILTER_SCRIPTS.items():
+		if name not in script or app not in frappe.get_installed_apps():
+			continue
+		try:
+			with open(frappe.get_app_path(app, *path.split("/")), encoding="utf-8") as source:
+				filters += _array_filters(source.read())
+		except OSError:
+			continue
+	return filters
+
+
+def _pushed_filters(script: str) -> list[dict[str, Any]]:
+	filters = []
+	for match in _FILTERS_PUSH.finditer(script):
+		start = match.end() - 1
+		end = _matching(script, start, "(", ")")
+		if end > 0:
+			filters += _definitions(script[start + 1 : end])
+	return filters
+
+
+def _definitions(text: str) -> list[dict[str, Any]]:
+	filters = []
+	for block in _object_blocks(text):
 		fieldname = _string_property(block, "fieldname")
 		if not fieldname:
 			continue
@@ -37,6 +83,9 @@ def discover_filters(report_name: str) -> tuple[list[dict[str, Any]], list[str]]
 			"fieldtype": fieldtype,
 			"required": bool(_scalar_property(block, "reqd")),
 		}
+		required_when = re.search(r"""\bmandatory_depends_on\s*:\s*(["'`])(.*?)\1""", block)
+		if required_when:
+			definition["required_when"] = required_when.group(2).removeprefix("eval:").strip()
 		options = _options_property(block, fieldtype)
 		if options is not None:
 			definition["options"] = options
@@ -46,23 +95,34 @@ def discover_filters(report_name: str) -> tuple[list[dict[str, Any]], list[str]]
 		elif expression:
 			definition["default_expression"] = expression
 		filters.append(definition)
-	return filters, []
+	return filters
 
 
 def apply_defaults(filters: dict[str, Any], definitions: list[dict[str, Any]]) -> dict[str, Any]:
 	result = dict(filters)
+	for definition in definitions:
+		if definition["fieldname"] not in result and "default" in definition:
+			result[definition["fieldname"]] = definition["default"]
 	missing = []
 	for definition in definitions:
 		fieldname = definition["fieldname"]
-		if fieldname not in result and "default" in definition:
-			result[fieldname] = definition["default"]
-		if definition.get("required") and result.get(fieldname) in (None, "", []):
+		if result.get(fieldname) not in (None, "", []):
+			continue
+		if definition.get("required"):
 			missing.append(fieldname)
+		elif _condition_met(definition.get("required_when"), result):
+			missing.append(f"{fieldname} (required when {definition['required_when']})")
 	if missing:
 		raise frappe.ValidationError(
 			"Missing required report filters: " + ", ".join(missing) + ". Call report_requirements first."
 		)
 	return result
+
+
+def _condition_met(expression: str | None, filters: dict[str, Any]) -> bool:
+	"""Evaluate a simple `doc.<field> == '<value>'` condition; anything else reads as unmet."""
+	match = re.fullmatch(r"""doc\.(\w+)\s*===?\s*["'](.*)["']""", (expression or "").strip())
+	return bool(match) and str(filters.get(match.group(1))) == match.group(2)
 
 
 def _object_blocks(text: str) -> list[str]:
@@ -155,6 +215,10 @@ def _default_property(block: str) -> tuple[Any, str | None]:
 	expression = _property_expression(block, "default")
 	if not expression:
 		return None, None
+	# A Select default written as a one-item list, e.g. `default: ["Fiscal Year"]`.
+	single = re.fullmatch(rf"\[\s*{_STRING}\s*\]", expression)
+	if single:
+		return _unescape(single.group(1)), None
 	user_default = re.search(r"frappe\.defaults\.get_user_default\([\"']([^\"']+)", expression)
 	if user_default:
 		return frappe.defaults.get_user_default(user_default.group(1)), expression

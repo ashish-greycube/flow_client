@@ -234,6 +234,9 @@ async function switchSession(name) {
 		(attachmentsByRun[a.run] ||= []).push({ file_name: a.file_name, file_size: a.file_size });
 	}
 
+	// Each run's recorded working time, shown on its reply as the live timer did.
+	const runDurations = doc.run_durations || {};
+
 	// Merge consecutive assistant rows (one per iteration in the doc) into one
 	// message, as live does — otherwise the tool grouping fragments per iteration.
 	let current = null;
@@ -257,7 +260,10 @@ async function switchSession(name) {
 				current.agentSwitch = pendingAgentSwitch;
 				pendingAgentSwitch = null;
 			}
-			if (m.run) current.runName = m.run;
+			if (m.run) {
+				current.runName = m.run;
+				current.elapsedMs = runDurations[m.run] ?? null;
+			}
 			if (m.content) current.parts.push(makeTextPart(m.content));
 			for (const t of parseToolCalls(m.tool_calls)) {
 				current.parts.push(makeToolPart(t.id, t.function.name, t.function.arguments));
@@ -326,7 +332,6 @@ async function restoreActiveRun(session) {
 		msg = last;
 		msg.questions = [];
 		msg.pending = true;
-		msg.startedAt = Date.now();
 	} else {
 		if (last?.role === "user") {
 			last.interrupted = false;
@@ -334,6 +339,9 @@ async function restoreActiveRun(session) {
 		}
 		msg = pushAssistant();
 	}
+	// Continue from the time the run has already worked rather than restarting at 0.
+	msg.elapsedMs = active.elapsed_ms ?? msg.elapsedMs;
+	msg.startedAt = Date.now();
 	msg.runName = active.run;
 	runName.value = active.run;
 	sending.value = true;

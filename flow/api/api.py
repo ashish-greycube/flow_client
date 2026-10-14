@@ -38,6 +38,8 @@ def start_run(
 	available: this returns at once with the run and a stream id, and the events are
 	followed over realtime / `get_run_events`. Without a worker it falls back to SSE."""
 	require_flow_user()
+	# The run's duration counts from here, as the chat's live timer does from sending.
+	started_at = frappe.utils.now_datetime()
 	files = _parse_attachments(attachments)
 	if not isinstance(input, str) or (not input.strip() and not files):
 		frappe.throw(_("Input is required."), title=_("Invalid Input"))
@@ -60,6 +62,7 @@ def start_run(
 			routing_action=decision.action,
 			routing_confidence=decision.confidence,
 			routing_reason=decision.reason,
+			started_at=started_at,
 		)
 		return _dispatch_background(run, kind="start", announce=True)
 	out = convo.chat(
@@ -69,6 +72,7 @@ def start_run(
 		routing_action=decision.action,
 		routing_confidence=decision.confidence,
 		routing_reason=decision.reason,
+		started_at=started_at,
 	)
 	return _sse_response(out) if stream else _summarize(out)
 
@@ -224,17 +228,25 @@ def get_active_run(name: str) -> dict[str, Any] | None:
 	from flow.lib.background import active_stream
 	from flow.routing.conversation import chat_sessions
 
+	from flow.flow.doctype.flow_run.flow_run import elapsed_ms
+
 	runs = frappe.get_all(
 		"Flow Run",
 		filters={"session": ["in", chat_sessions(name.strip())], "status": ["in", ["Running", "Paused"]]},
-		fields=["name", "status"],
+		fields=["name", "status", "duration_ms", "active_since"],
 		order_by="creation desc",
 		limit_page_length=5,
 	)
 	for run in runs:
 		stream = active_stream(run.name)
 		if stream:
-			return {"run": run.name, "stream": stream, "status": run.status}
+			# Time worked so far, so a reloaded page's timer continues instead of restarting.
+			return {
+				"run": run.name,
+				"stream": stream,
+				"status": run.status,
+				"elapsed_ms": elapsed_ms(run.duration_ms, run.active_since),
+			}
 	return None
 
 

@@ -183,9 +183,9 @@ class TestBackgroundRun(IntegrationTestCase):
 		payload, job = self._start()
 		chat = frappe.db.get_value("Flow Run", payload["name"], "session")
 
-		self.assertEqual(
-			get_active_run(chat), {"run": payload["name"], "stream": payload["stream"], "status": "Running"}
-		)
+		active = get_active_run(chat)
+		self.assertGreaterEqual(active.pop("elapsed_ms"), 0)
+		self.assertEqual(active, {"run": payload["name"], "stream": payload["stream"], "status": "Running"})
 		self._execute(job, _stream_chat(["ok"], _final("ok")))
 		self.assertIsNone(get_active_run(chat))
 

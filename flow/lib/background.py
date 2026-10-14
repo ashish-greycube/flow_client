@@ -245,10 +245,20 @@ class _Heartbeat:
 
 def _mark_failed_if_running(run_name: str, error: str) -> None:
 	"""A run the job could not even start streaming must not stay Running."""
-	if frappe.db.get_value("Flow Run", run_name, "status") != "Running":
+	from flow.flow.doctype.flow_run.flow_run import elapsed_ms
+
+	run = frappe.db.get_value("Flow Run", run_name, ["status", "duration_ms", "active_since"], as_dict=True)
+	if not run or run.status != "Running":
 		return
 	frappe.db.set_value(
-		"Flow Run", run_name, {"status": "Failed", "error": (error or "Run failed.")[:5000]}
+		"Flow Run",
+		run_name,
+		{
+			"status": "Failed",
+			"error": (error or "Run failed.")[:5000],
+			"duration_ms": elapsed_ms(run.duration_ms, run.active_since),
+			"active_since": None,
+		},
 	)
 	frappe.db.commit()
 

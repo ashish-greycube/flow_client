@@ -5,7 +5,9 @@
  "engine": "InnoDB",
  "field_order": [
   "chat_section",
-  "chat_run_mode"
+  "chat_run_mode",
+  "routing_section",
+  "routing_model"
  ],
  "fields": [
   {
@@ -20,12 +22,24 @@
    "fieldtype": "Select",
    "label": "Run Chat Replies",
    "options": "Background Job\nIn Request"
+  },
+  {
+   "fieldname": "routing_section",
+   "fieldtype": "Section Break",
+   "label": "Routing"
+  },
+  {
+   "description": "The model that picks an agent for each message in Auto routing. Choose a fast model with thinking turned off (in the model's Params), so routing takes a second or two instead of the agent model's thinking time. When empty, routing uses the chat's or the agent's model. Either way routing gives up after 10 seconds and the message goes to Flow.",
+   "fieldname": "routing_model",
+   "fieldtype": "Link",
+   "label": "Routing Model",
+   "options": "Flow Model"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-02 00:00:00",
+ "modified": "2026-10-14 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Flow",
  "name": "Flow Settings",
