@@ -135,11 +135,11 @@ This allowlist is a mandatory operating boundary. The tools enforce the current 
 
 WORK METHOD
 1. Translate the request into the smallest relevant subset of the allowed DocTypes.
-2. Inspect a DocType before using unfamiliar fields.
-3. Read with narrow filters, explicit fields, and small limits. Query child DocTypes directly when line-level evidence is required.
+2. Inspect a DocType before using unfamiliar fields; pass describe's `fields` to inspect only the ones you need.
+3. To check every record, use analyze_business_data on the server instead of reading rows to compare yourself: `aggregate` for totals per group (per party, item, account, employee), `duplicates` for records that match each other (same party and amount within days, same tax ID or bank account, an invoice paid twice), `field_changes` for who changed which field and when. Read rows only to show the evidence behind a finding, with narrow filters and explicit fields. Query child DocTypes directly when line-level evidence is required.
 4. Use a saved report only when its reference DocType is in scope. Inspect its requirements before the first run.
 5. Cross-check material findings against the underlying records. Separate facts, assumptions, missing evidence, and recommendations.
-6. Report concise evidence first. Never describe incomplete coverage as a clean result.
+6. Report concise evidence first. A result with `has_more` or `_truncated` is PARTIAL: say how much was covered, and never describe incomplete coverage as a clean result.
 {STRICT_AGENT_VALIDATION_INSTRUCTIONS}
 {write_section}
 {validation_section}

@@ -15,6 +15,8 @@ from flow.utils.safe_exec import safe_exec
 
 MAX_READ_LIMIT = 200
 LAYOUT_FIELDTYPES = frozenset({"Section Break", "Column Break", "Tab Break", "HTML", "Heading"})
+# describe lists at most this many Select options per field; long lists dominate its size.
+MAX_DESCRIBED_OPTIONS = 12
 _CONFIRM_STR_LIMIT = 120
 _ERROR_LIMIT = 300
 _LIFECYCLE_BY_DOCSTATUS = {0: "submit", 1: "cancel", 2: "amend"}
@@ -51,26 +53,34 @@ def find_doctypes(search: str | None = None, module: str | None = None, limit: i
 
 
 @tool
-def describe(doctype: str, name: str | None = None) -> dict[str, Any]:
-	"""Inspect a DocType's fields and your permissions. Pass `name` to also get a record's available actions."""
-	if not frappe.has_permission(doctype, "read"):
+def describe(doctype: str, name: str | None = None, fields: list[str] | None = None) -> dict[str, Any]:
+	"""Inspect a DocType's fields and your permissions. Pass `fields` to describe only those
+	fields, and `name` to also get a record's available actions. A child table also lists the
+	parent DocTypes it belongs to."""
+	meta = frappe.get_meta(doctype)
+	permission_doctype = doctype
+	if meta.istable:
+		# A child table has no permissions of its own: any parent the user may read will do.
+		readable = [p for p in parent_doctypes(doctype) if frappe.has_permission(p, "read")]
+		permission_doctype = readable[0] if readable else doctype
+	if not frappe.has_permission(permission_doctype, "read"):
 		raise PermissionError(f"No permission to read {doctype}")
 
-	meta = frappe.get_meta(doctype)
-	fields = [
-		{
-			"fieldname": f.fieldname,
-			"label": f.label,
-			"type": f.fieldtype,
-			"options": f.options,
-			"default": f.default,
-			"required": bool(f.reqd),
-		}
+	wanted = set(fields or [])
+	described = [
+		_describe_field(f)
 		for f in meta.fields
-		if f.fieldtype not in LAYOUT_FIELDTYPES
+		if f.fieldtype not in LAYOUT_FIELDTYPES and (not wanted or f.fieldname in wanted)
 	]
-	permissions = {p: bool(frappe.has_permission(doctype, p)) for p in ("read", "write", "create", "delete")}
-	result: dict[str, Any] = {"doctype": doctype, "fields": fields, "permissions": permissions}
+	permissions = {
+		p: bool(frappe.has_permission(permission_doctype, p)) for p in ("read", "write", "create", "delete")
+	}
+	result: dict[str, Any] = {"doctype": doctype, "fields": described, "permissions": permissions}
+	if meta.istable:
+		result["parent_doctypes"] = parent_doctypes(doctype)
+	unknown = sorted(wanted - {f["fieldname"] for f in described})
+	if unknown:
+		result["unknown_fields"] = unknown
 
 	if name:
 		if not frappe.has_permission(doctype, "read", name):
@@ -89,20 +99,116 @@ def read(
 	fields: list[str] | None = None,
 	limit: int = 20,
 	order_by: str | None = None,
-) -> list[dict]:
+	parent_doctype: str | None = None,
+) -> list[dict] | dict[str, Any]:
 	"""Read records from a DocType, honouring the user's permissions.
 
 	`filters` is a dict like {"status": "Open"} or {"qty": [">", 5]}. `fields` defaults
-	to the record name. Returns a list of matching records (capped at 200).
+	to the record name. Returns a list of matching records (at most 200). When more records
+	match than `limit`, returns {"rows": [...], "has_more": true, "note": ...} instead: the
+	rows are then only part of the data. A child table (e.g. Payment Entry Reference) is read
+	through its parent DocType; pass `parent_doctype` if it belongs to more than one.
 	"""
+	rows, has_more = read_rows(doctype, filters, fields, limit, order_by, parent_doctype)
+	if not has_more:
+		return rows
+	return {
+		"rows": rows,
+		"has_more": True,
+		"note": (
+			f"More records match than the {len(rows)} returned, so these rows are PARTIAL. Narrow the "
+			"filters, raise `limit` (max 200), or use analyze_business_data (aggregate / duplicates) "
+			"to cover every record."
+		),
+	}
+
+
+def read_records(
+	doctype: str,
+	filters: dict | None = None,
+	fields: list[str] | None = None,
+	limit: int = 20,
+	order_by: str | None = None,
+	parent_doctype: str | None = None,
+) -> list[dict]:
+	"""`read` for sandboxed scripts: always the plain list of rows they expect."""
+	return read_rows(doctype, filters, fields, limit, order_by, parent_doctype)[0]
+
+
+def read_rows(
+	doctype: str,
+	filters: dict | list | None = None,
+	fields: list[str] | None = None,
+	limit: int = 20,
+	order_by: str | None = None,
+	parent_doctype: str | None = None,
+) -> tuple[list[dict], bool]:
+	"""Up to `limit` (max 200) permitted rows, and whether more match."""
 	limit = min(max(int(limit), 1), MAX_READ_LIMIT)
-	return frappe.get_list(
+	filters, parent = child_table_scope(doctype, filters, parent_doctype)
+	rows = frappe.get_list(
 		doctype,
 		filters=filters,
 		fields=fields or ["name"],
-		limit=limit,
+		limit=limit + 1,
 		order_by=order_by,
+		parent_doctype=parent,
 	)
+	return rows[:limit], len(rows) > limit
+
+
+def child_table_scope(
+	doctype: str, filters: dict | list | None, parent_doctype: str | None = None
+) -> tuple[dict | list | None, str | None]:
+	"""For a child table, the parent DocType to read it through (Frappe returns only row
+	names otherwise) and the filters narrowed to that parent's rows. Unchanged otherwise."""
+	if not frappe.get_meta(doctype).istable:
+		return filters, None
+	parent = parent_doctype or _child_table_parent(doctype, filters)
+	if isinstance(filters, list):
+		return [*filters, ["parenttype", "=", parent]], parent
+	return {"parenttype": parent, **(filters or {})}, parent
+
+
+def parent_doctypes(child: str) -> list[str]:
+	"""The DocTypes that hold `child` as a child table (standard or custom field)."""
+	table_types = ["in", ["Table", "Table MultiSelect"]]
+	parents = frappe.get_all("DocField", filters={"fieldtype": table_types, "options": child}, pluck="parent")
+	parents += frappe.get_all("Custom Field", filters={"fieldtype": table_types, "options": child}, pluck="dt")
+	return sorted({p for p in parents if not frappe.get_meta(p).istable})
+
+
+def _child_table_parent(child: str, filters: dict | list | None = None) -> str:
+	if isinstance(filters, dict) and isinstance(filters.get("parenttype"), str):
+		return filters["parenttype"]
+	parents = parent_doctypes(child)
+	if len(parents) == 1:
+		return parents[0]
+	raise frappe.ValidationError(
+		f"{child} is a child table of {', '.join(parents) or 'no DocType'}; pass parent_doctype."
+	)
+
+
+def _describe_field(df) -> dict[str, Any]:
+	"""One field, without empty attributes or a label that repeats the fieldname, and with long
+	Select option lists shortened."""
+	out: dict[str, Any] = {"fieldname": df.fieldname, "type": df.fieldtype}
+	# A label that only repeats the fieldname (posting_date / "Posting Date") adds nothing.
+	if df.label and df.label.casefold() != df.fieldname.replace("_", " ").casefold():
+		out["label"] = df.label
+	options = df.options
+	if df.fieldtype == "Select" and options:
+		values = [v for v in options.split("\n") if v.strip()]
+		if len(values) > MAX_DESCRIBED_OPTIONS:
+			values = [*values[:MAX_DESCRIBED_OPTIONS], f"… +{len(values) - MAX_DESCRIBED_OPTIONS} more"]
+		options = values
+	if options:
+		out["options"] = options
+	if df.default not in (None, ""):
+		out["default"] = df.default
+	if df.reqd:
+		out["required"] = True
+	return out
 
 
 KNOWLEDGE_SEARCH_SLUG = "search_knowledge"

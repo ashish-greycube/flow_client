@@ -73,14 +73,137 @@ def start_extraction(name: str, document_type: str | None = None, force: bool | 
 		doc.document_type = document_type
 		doc.save()
 
+	_enqueue_extraction(doc.name, force)
+	return doc.as_dict()
+
+
+@frappe.whitelist()
+def start_batch(entries: list | str, document_type: str, mode: str) -> dict[str, Any]:
+	"""Start extraction for several just-uploaded entries at once, all as `document_type`.
+	`mode` "separate" makes each file its own document, reviewed on its own page as
+	usual; "combined" (Expense Claim only) groups them into one batch that becomes a
+	single Expense Claim — see flow.services.file2erp_batch."""
+	require_flow_user()
+	from flow.services.file2erp_batch import COMBINABLE_DOCUMENT_TYPES
+
+	names = _parse_list(entries) or []
+	if not names:
+		frappe.throw(_("Choose at least one file."), title=_("Invalid Input"))
+	if mode not in ("separate", "combined"):
+		frappe.throw(_("Mode must be separate or combined."), title=_("Invalid Input"))
+	options = frappe.get_meta("Flow File2ERP").get_field("document_type").options.split("\n")
+	if document_type not in options:
+		frappe.throw(_("Unknown document type {0}.").format(document_type), title=_("Invalid Input"))
+	if mode == "combined" and document_type not in COMBINABLE_DOCUMENT_TYPES:
+		frappe.throw(
+			_("Only Expense Claims can combine several files into one document."), title=_("Not Allowed")
+		)
+
+	batch = frappe.generate_hash(length=10) if mode == "combined" else None
+	for name in names:
+		doc = frappe.get_doc("Flow File2ERP", name)
+		if not frappe.has_permission("Flow File2ERP", "write", doc=doc):
+			frappe.throw(_("Not permitted to edit this entry."), frappe.PermissionError)
+		if doc.status != "Uploaded":
+			frappe.throw(
+				_("{0} has already been processed.").format(doc.file_name or doc.name), title=_("Not Allowed")
+			)
+		doc.document_type = document_type
+		doc.batch = batch
+		doc.save()
+		_enqueue_extraction(doc.name)
+	return {"batch": batch, "entries": names}
+
+
+@frappe.whitelist()
+def get_file2erp_batch(batch: str) -> dict[str, Any]:
+	"""A combined Expense Claim's files with their status, and the claim's header and
+	expense rows merged from every file's extraction."""
+	require_flow_user()
+	from flow.services import file2erp_batch
+
+	entries = file2erp_batch.batch_entries(batch)
+	fields, rows = file2erp_batch.merge(entries)
+	file_urls = dict(
+		frappe.get_all("File", filters={"name": ["in", [e.file for e in entries]]}, fields=["name", "file_url"], as_list=True)
+	)
+	created = next((e for e in entries if e.created_document), None)
+	return {
+		"batch": batch,
+		"document_type": entries[0].document_type,
+		"entries": [
+			{
+				"name": e.name,
+				"file_name": e.file_name,
+				"file_url": file_urls.get(e.file),
+				"status": e.status,
+				"error": e.error,
+				"modified": e.modified,
+				"expense_rows": len(file2erp_batch.load_json(e.extracted_line_items, [])),
+			}
+			for e in entries
+		],
+		"fields": fields,
+		"line_items": rows,
+		"not_ready": file2erp_batch.not_ready(entries) if not created else [],
+		"created_document_type": created.created_document_type if created else None,
+		"created_document": created.created_document if created else None,
+	}
+
+
+@frappe.whitelist()
+def remove_from_batch(name: str) -> dict[str, Any]:
+	"""Take one file out of its combined claim; it stays as a standalone entry that can be
+	reviewed and created on its own page."""
+	require_flow_user()
+	doc = frappe.get_doc("Flow File2ERP", name)
+	if not frappe.has_permission("Flow File2ERP", "write", doc=doc):
+		frappe.throw(_("Not permitted to edit this entry."), frappe.PermissionError)
+	if doc.status == "Document Created":
+		frappe.throw(_("This file is already part of a created document."), title=_("Not Allowed"))
+	doc.batch = None
+	doc.save()
+	return doc.as_dict()
+
+
+@frappe.whitelist()
+def create_combined_expense_claim(
+	batch: str, fields: dict | str | None = None, line_items: list | str | None = None
+) -> dict[str, Any]:
+	"""Create one Expense Claim from every file in `batch`, using the reviewed header and
+	rows (or the merged extraction when not given). Refused until every file in the
+	batch has been extracted, so no receipt is silently left out."""
+	require_flow_user()
+	from flow.services import file2erp_batch
+
+	if not frappe.has_permission("Expense Claim", "create"):
+		frappe.throw(_("Not permitted to create {0}.").format(_("Expense Claim")), frappe.PermissionError)
+	entries = file2erp_batch.batch_entries(batch)
+	for entry in entries:
+		if not frappe.has_permission("Flow File2ERP", "write", doc=entry.name):
+			frappe.throw(_("Not permitted to edit this entry."), frappe.PermissionError)
+	reasons = file2erp_batch.not_ready(entries)
+	if reasons:
+		frappe.throw("<br>".join(reasons), title=_("Not Ready"))
+
+	merged_fields, merged_rows = file2erp_batch.merge(entries)
+	parsed_fields = _parse_dict(fields)
+	parsed_rows = _parse_list(line_items)
+	return file2erp_batch.create_claim(
+		entries,
+		merged_fields if parsed_fields is None else parsed_fields,
+		merged_rows if parsed_rows is None else parsed_rows,
+	)
+
+
+def _enqueue_extraction(name: str, force: bool = False) -> None:
 	frappe.enqueue(
 		"flow.services.file2erp.process_entry",
-		name=doc.name,
+		name=name,
 		force=force,
 		queue="long",
 		enqueue_after_commit=True,
 	)
-	return doc.as_dict()
 
 
 @frappe.whitelist()
@@ -192,6 +315,7 @@ def list_file2erp_entries(filters: dict | str | None = None, limit: int = 50) ->
 			"file_type",
 			"status",
 			"document_type",
+			"batch",
 			"confidence",
 			"created_document_type",
 			"created_document",
@@ -258,6 +382,12 @@ def create_document_from_entry(
 	doc = frappe.get_doc("Flow File2ERP", name)
 	if not frappe.has_permission("Flow File2ERP", "write", doc=doc):
 		frappe.throw(_("Not permitted to edit this entry."), frappe.PermissionError)
+	if doc.batch:
+		# Creating it here too would put this receipt into two claims.
+		frappe.throw(
+			_("This file is part of a combined Expense Claim. Create it from the combined claim's page."),
+			title=_("Not Allowed"),
+		)
 	if not frappe.has_permission(doctype, "create"):
 		frappe.throw(_("Not permitted to create {0}.").format(doctype), frappe.PermissionError)
 

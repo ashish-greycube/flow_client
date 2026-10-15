@@ -31,3 +31,31 @@ export const openChatSession = (name) =>
 // must confirm with the user first — this has no agent-run approval pause of its own.
 export const createDocumentFromEntry = (name, doctype, fields, line_items) =>
 	frappe.xcall("flow.api.file2erp.create_document_from_entry", { name, doctype, fields, line_items });
+
+// Mirrors Flow File2ERP's own document_type Select options (flow_file2erp.json).
+export const FILE2ERP_DOCUMENT_TYPES = [
+	"Expense Claim",
+	"Sales Invoice",
+	"Purchase Invoice",
+	"Purchase Order",
+	"Sales Order",
+	"Payment Entry",
+	"Lead",
+];
+// Only an Expense Claim combines several files into one document (many receipts, one claim).
+export const COMBINABLE_DOCUMENT_TYPES = ["Expense Claim"];
+
+// Several just-uploaded files at once: mode "separate" (one document per file) or
+// "combined" (one Expense Claim for all of them, reviewed on the batch page).
+export const startBatch = (entries, document_type, mode) =>
+	frappe.xcall("flow.api.file2erp.start_batch", { entries, document_type, mode });
+
+export const getFile2ERPBatch = (batch) =>
+	frappe.xcall("flow.api.file2erp.get_file2erp_batch", { batch });
+
+export const removeFromBatch = (name) =>
+	frappe.xcall("flow.api.file2erp.remove_from_batch", { name });
+
+// Like createDocumentFromEntry, the caller must confirm with the user first.
+export const createCombinedExpenseClaim = (batch, fields, line_items) =>
+	frappe.xcall("flow.api.file2erp.create_combined_expense_claim", { batch, fields, line_items });

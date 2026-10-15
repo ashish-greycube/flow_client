@@ -14,6 +14,7 @@ import {
 	createDocumentFromEntry,
 	deleteFile2ERPEntry,
 	startExtraction,
+	FILE2ERP_DOCUMENT_TYPES,
 } from "@/api/file2erp";
 
 const props = defineProps({
@@ -42,18 +43,7 @@ const promptText = ref("");
 // check alone would stop polling right where it matters most.
 const awaitingExtraction = ref(false);
 
-// Mirrors Flow File2ERP's own document_type Select options (flow_file2erp.json) —
-// hardcoded here too since that's the authoritative, already-installed-filtered list
-// the backend itself offers; no need for a second round trip just to fetch it.
-const DOCUMENT_TYPE_OPTIONS = [
-	"Expense Claim",
-	"Sales Invoice",
-	"Purchase Invoice",
-	"Purchase Order",
-	"Sales Order",
-	"Payment Entry",
-	"Lead",
-];
+const DOCUMENT_TYPE_OPTIONS = FILE2ERP_DOCUMENT_TYPES;
 
 const STATUS_THEME = {
 	Uploaded: "gray",
@@ -397,6 +387,25 @@ async function deleteEntry() {
 						{{ entry.error }}
 					</div>
 
+					<!-- Part of a combined Expense Claim: corrections saved here flow into the
+					     claim, but the claim itself is created once, from its own page. -->
+					<div
+						v-if="entry.batch"
+						class="flex items-center justify-between gap-3 rounded-lg border border-outline-blue-1 bg-surface-blue-1 px-4 py-3 text-sm"
+					>
+						<span class="text-ink-blue-3">
+							{{ __("This file is part of a combined Expense Claim. Save any corrections here, then create the claim from its own page.") }}
+						</span>
+						<Button
+							variant="outline"
+							size="sm"
+							class="shrink-0"
+							@click="router.push({ name: 'file2erp-batch', params: { batch: entry.batch } })"
+						>
+							{{ __("Open combined claim") }}
+						</Button>
+					</div>
+
 					<div v-if="editable" class="flex justify-end">
 						<Button
 							variant="outline"
@@ -415,10 +424,15 @@ async function deleteEntry() {
 							v-model="targetDoctype"
 							:label="__('Create Document')"
 							:placeholder="__('e.g. Sales Invoice')"
-							:disabled="!editable || busy"
+							:disabled="!editable || busy || !!entry.batch"
 							class="flex-1"
 						/>
-						<Button variant="solid" :loading="creating" :disabled="!editable || busy" @click="confirmCreate">
+						<Button
+							variant="solid"
+							:loading="creating"
+							:disabled="!editable || busy || !!entry.batch"
+							@click="confirmCreate"
+						>
 							{{ __("Create") }}
 						</Button>
 					</section>

@@ -42,6 +42,7 @@ class FlowFile2ERP(Document):
 		from frappe.types import DF
 
 		ai_input: DF.LongText | None
+		batch: DF.Data | None
 		confidence: DF.Percent
 		conversation: DF.Link | None
 		created_document: DF.DynamicLink | None

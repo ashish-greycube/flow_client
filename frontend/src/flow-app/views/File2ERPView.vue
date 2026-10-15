@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import SearchInput from "@/components/SearchInput.vue";
+import File2ERPBatchDialog from "../components/File2ERPBatchDialog.vue";
 import { Button, FeatherIcon, Spinner, Badge } from "@/lib/ui";
 import { __ } from "@/lib/translate";
 import { uploadFile } from "@/api/client";
@@ -18,6 +19,9 @@ const uploading = ref(false);
 // and which step — sending the bytes, then registering the File2ERP entry.
 const uploadProgress = ref({ index: 0, total: 0, fileName: "", step: "" });
 const fileInput = ref(null);
+// Several files uploaded together: ask what they become (see File2ERPBatchDialog).
+const batchDialogOpen = ref(false);
+const batchEntries = ref([]);
 
 // Backend (flow/boot.py) is the single source of truth for supported file types.
 const ACCEPT = computed(() =>
@@ -116,25 +120,38 @@ async function handleFiles(fileList) {
 			}
 		}
 		schedulePoll();
-		if (created.length) {
-			frappe.show_alert({
-				message:
-					created.length === 1
-						? __("Uploaded {0}. Choose a Document Type to extract its data.", [created[0].file_name])
-						: __("Uploaded {0} files. Open each one to choose its Document Type and extract.", [created.length]),
-				indicator: "green",
-			});
-		}
 		// A single upload goes straight to its detail page to pick/confirm the Document
 		// Type and start extraction — the whole point of showing that page at all. A
-		// batch drop can't jump to more than one page at once, so it stays on the list;
-		// each entry sits at "Uploaded" until opened individually.
+		// batch asks once what all its files become; "Decide later" leaves each entry at
+		// "Uploaded" until opened individually, as before.
 		if (created.length === 1) {
+			frappe.show_alert({
+				message: __("Uploaded {0}. Choose a Document Type to extract its data.", [created[0].file_name]),
+				indicator: "green",
+			});
 			router.push({ name: "file2erp-detail", params: { name: created[0].name } });
+		} else if (created.length > 1) {
+			batchEntries.value = created;
+			batchDialogOpen.value = true;
 		}
 	} finally {
 		uploading.value = false;
 	}
+}
+
+async function onBatchStarted({ batch, mode, documentType }) {
+	if (mode === "combined") {
+		router.push({ name: "file2erp-batch", params: { batch } });
+		return;
+	}
+	frappe.show_alert({
+		message: __("Extracting {0} files as {1}. Open each one to review and create it.", [
+			batchEntries.value.length,
+			documentType,
+		]),
+		indicator: "blue",
+	});
+	await load();
 }
 
 function pickFiles() {
@@ -158,8 +175,9 @@ function onDrop(e) {
 	handleFiles(e.dataTransfer.files);
 }
 
-function openEntry(name) {
-	router.push({ name: "file2erp-detail", params: { name } });
+function openEntry(entry) {
+	if (entry.batch) router.push({ name: "file2erp-batch", params: { batch: entry.batch } });
+	else router.push({ name: "file2erp-detail", params: { name: entry.name } });
 }
 
 function removeEntry(entry, event) {
@@ -197,6 +215,13 @@ function formatSize(bytes) {
 				@change="onFilesPicked"
 			/>
 		</header>
+
+		<File2ERPBatchDialog
+			v-model="batchDialogOpen"
+			:entries="batchEntries"
+			:default-type="batchEntries[0]?.document_type || 'Expense Claim'"
+			@started="onBatchStarted"
+		/>
 
 		<div
 			v-if="uploading"
@@ -273,10 +298,18 @@ function formatSize(bytes) {
 							v-for="entry in filtered"
 							:key="entry.name"
 							class="group cursor-pointer border-b border-outline-gray-1 last:border-0 hover:bg-surface-gray-1"
-							@click="openEntry(entry.name)"
+							@click="openEntry(entry)"
 						>
-							<td class="max-w-xs truncate px-3 py-2 font-medium text-ink-gray-9">
-								{{ entry.file_name }}
+							<td class="max-w-xs px-3 py-2 font-medium text-ink-gray-9">
+								<div class="flex items-center gap-2">
+									<span class="truncate">{{ entry.file_name }}</span>
+									<Badge
+										v-if="entry.batch"
+										variant="subtle"
+										theme="blue"
+										:label="__('Combined claim')"
+									/>
+								</div>
 							</td>
 							<td class="px-3 py-2 text-ink-gray-6">{{ entry.file_type }}</td>
 							<td class="px-3 py-2">

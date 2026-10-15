@@ -17,7 +17,7 @@ from typing import Any
 # About 9K tokens.
 MAX_RESULT_CHARS = 35_000
 # Top-level list keys that hold rows in Flow's tool results. A bare list is rows too.
-ROW_KEYS = ("data", "result", "rows", "results", "reports")
+ROW_KEYS = ("data", "result", "rows", "results", "reports", "groups", "changes")
 # Keys the cap owns in a truncated result; a tool's own key of the same name is dropped.
 META_KEYS = ("_truncated", "shown", "total", "note")
 # Room for the digits of the note and separators.

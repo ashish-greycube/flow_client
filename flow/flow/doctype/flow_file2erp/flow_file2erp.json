@@ -12,6 +12,7 @@
   "file_size",
   "file_type",
   "document_type",
+  "batch",
   "confidence",
   "section_break_usage",
   "input_tokens",
@@ -92,6 +93,15 @@
    "label": "Document Type",
    "options": "Expense Claim\nSales Invoice\nPurchase Invoice\nPurchase Order\nSales Order\nPayment Entry\nLead",
    "reqd": 1
+  },
+  {
+   "description": "Files uploaded together and combined into one Expense Claim share this batch. Empty for a file that becomes its own document.",
+   "fieldname": "batch",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Batch",
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "description": "Structuring confidence from 0 to 100.",
@@ -222,7 +232,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-09 12:00:00.000000",
+ "modified": "2026-10-14 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Flow",
  "name": "Flow File2ERP",

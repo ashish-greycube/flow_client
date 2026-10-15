@@ -144,9 +144,12 @@ _SKIP_BUILTINS = frozenset({"execute", "search_knowledge"})
 def _flow_builtins() -> dict[str, Any]:
 	"""The permission-checked builtins, callable as plain functions inside the sandbox.
 	`execute` (no recursion) and `search_knowledge` (needs a bound scope) are left out."""
-	from flow.tools.builtins import BUILTIN_TOOLS
+	from flow.tools.builtins import BUILTIN_TOOLS, read_records
 
-	return {t.name: t.func for t in BUILTIN_TOOLS if t.name not in _SKIP_BUILTINS}
+	builtins = {t.name: t.func for t in BUILTIN_TOOLS if t.name not in _SKIP_BUILTINS}
+	# Scripts iterate read()'s rows; the agent-facing tool may wrap them with a has_more note.
+	builtins["read"] = read_records
+	return builtins
 
 
 def get_flow_safe_globals() -> NamespaceDict:

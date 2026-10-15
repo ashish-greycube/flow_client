@@ -42,6 +42,12 @@ class TestResultBudget(UnitTestCase):
 		self.assertIn("PARTIAL", out["note"])
 		self.assertTrue(out["success"])
 
+	def test_analysis_groups_and_changes_are_cut_too(self):
+		for key in ("groups", "changes"):
+			out = fit_result({"success": True, key: [{"records": ["X" * 300]}] * 400})
+			self.assertTrue(out["_truncated"], key)
+			self.assertLessEqual(len(json.dumps(out, default=str)), MAX_RESULT_CHARS)
+
 	def test_bare_list_is_wrapped(self):
 		out = fit_result([{"text": "x" * 500}] * 200)
 		self.assertTrue(out["_truncated"])

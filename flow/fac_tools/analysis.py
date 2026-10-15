@@ -19,6 +19,15 @@ from flow.utils.safe_exec import safe_exec
 
 MAX_ANALYSIS_ROWS = 10_000
 MAX_QUERY_ROWS = 1_000
+# aggregate / duplicates / field_changes return at most this many groups or changes, and a
+# duplicate group lists at most this many of its records: the model needs the largest findings
+# and evidence for each, not every member of a recurring 40-invoice pattern.
+MAX_RESULT_GROUPS = 100
+MAX_GROUP_RECORDS = 10
+# duplicates and field_changes compare in Python, over at most this many records.
+MAX_SCAN_ROWS = 50_000
+AGGREGATE_FUNCTIONS = {"sum": "SUM", "count": "COUNT", "avg": "AVG", "min": "MIN", "max": "MAX"}
+STANDARD_FIELDS = frozenset({"name", "owner", "creation", "modified", "modified_by", "docstatus", "parent", "parenttype", "idx"})
 FORBIDDEN_SQL = re.compile(
 	r"\b(?:insert|update|delete|drop|create|alter|truncate|replace|grant|revoke|call|execute|load|outfile|dumpfile|lock|unlock|set)\b",
 	re.IGNORECASE,
@@ -28,13 +37,38 @@ FORBIDDEN_SQL = re.compile(
 @tool
 def analyze_business_data(
 	doctype: str,
-	analysis_type: Literal["profile", "statistics", "trends", "quality", "correlations"],
+	analysis_type: Literal[
+		"profile", "statistics", "trends", "quality", "correlations", "aggregate", "duplicates", "field_changes"
+	],
 	fields: list[str] | None = None,
 	filters: dict[str, Any] | None = None,
 	date_field: str | None = None,
 	limit: int = 1000,
+	group_by: list[str] | None = None,
+	aggregates: list[str] | None = None,
+	order_by: str | None = None,
+	within_days: int | None = None,
+	since: str | None = None,
+	parent_doctype: str | None = None,
 ) -> dict[str, Any]:
-	"""Profile permitted Frappe records for statistics, trends, quality, or correlations."""
+	"""Analyze permitted Frappe records on the server, across every matching record.
+
+	- profile / statistics / trends / quality / correlations: summaries of up to `limit` records.
+	- aggregate: totals per group, e.g. outstanding per customer or last movement per item.
+	  `group_by` fields, `aggregates` like ["sum:paid_amount", "count", "max:posting_date"],
+	  optional `order_by` (e.g. "sum_paid_amount desc"); returns at most `limit` groups.
+	- duplicates: groups of records whose `fields` match (text compared ignoring case and spacing),
+	  e.g. Payment Entry on ["party", "paid_amount"] with date_field "posting_date" and
+	  within_days 7, Supplier on ["tax_id"], Bank Account on ["bank_account_no"], or Payment Entry
+	  Reference on ["reference_name"] (an invoice paid twice).
+	- field_changes: edits to `fields` of `doctype` from its change history since `since`
+	  (default 90 days ago), e.g. Bank Account ["bank_account_no", "branch_code"].
+	Child tables are read through their parent; pass `parent_doctype` if there are several."""
+	if analysis_type in ("aggregate", "duplicates", "field_changes"):
+		return _record_analysis(
+			doctype, analysis_type, fields, filters, date_field, limit, group_by, aggregates,
+			order_by, within_days, since, parent_doctype,
+		)
 	frappe.has_permission(doctype, "read", throw=True)
 	selected = _analysis_fields(doctype, fields)
 	rows = [dict(row) for row in frappe.get_list(
@@ -144,6 +178,199 @@ def run_python_code(
 		"variables": variables,
 		"timeout_requested": timeout,
 	}
+
+
+def _record_analysis(
+	doctype, analysis_type, fields, filters, date_field, limit, group_by, aggregates, order_by,
+	within_days, since, parent_doctype,
+) -> dict[str, Any]:
+	from flow.tools.builtins import child_table_scope
+
+	filters, parent = child_table_scope(doctype, filters or {}, parent_doctype)
+	frappe.has_permission(parent or doctype, "read", throw=True)
+	limit = min(max(int(limit or 1), 1), MAX_RESULT_GROUPS)
+	result: dict[str, Any] = {"success": True, "doctype": doctype, "analysis_type": analysis_type}
+	if analysis_type == "aggregate":
+		result.update(_aggregate(doctype, filters, group_by or [], aggregates or ["count"], order_by, limit, parent))
+	elif analysis_type == "duplicates":
+		result.update(_duplicates(doctype, filters, fields, date_field, within_days, limit, parent))
+	else:
+		result.update(_field_changes(doctype, fields, since, limit))
+	return result
+
+
+def _aggregate(doctype, filters, group_by, aggregates, order_by, limit, parent) -> dict[str, Any]:
+	"""Totals per group, computed by the database over every permitted record."""
+	_check_fields(doctype, group_by)
+	columns, aliases = [], []
+	for spec in aggregates:
+		function, _, field = spec.partition(":")
+		function = function.strip().lower()
+		if function not in AGGREGATE_FUNCTIONS:
+			raise frappe.ValidationError(f"Unknown aggregate {spec!r}; use sum, count, avg, min or max.")
+		if function == "count" and not field:
+			columns.append({"COUNT": "*", "as": "count"})
+			aliases.append("count")
+			continue
+		_check_fields(doctype, [field])
+		alias = f"{function}_{field}"
+		columns.append({AGGREGATE_FUNCTIONS[function]: field, "as": alias})
+		aliases.append(alias)
+	order = _aggregate_order(order_by, aliases, group_by)
+	rows = frappe.get_list(
+		doctype,
+		filters=filters,
+		fields=[*group_by, *columns],
+		group_by=", ".join(group_by) or None,
+		order_by=order,
+		limit=limit + 1,
+		parent_doctype=parent,
+	)
+	result = {"group_by": group_by, "rows": rows[:limit], "groups_returned": min(len(rows), limit)}
+	if len(rows) > limit:
+		result["has_more"] = True
+		result["note"] = f"More than {limit} groups; these are the first {limit} by {order}. Raise limit or narrow filters."
+	return result
+
+
+def _aggregate_order(order_by: str | None, aliases: list[str], group_by: list[str]) -> str:
+	if not order_by:
+		return f"{aliases[0]} desc"
+	column, _, direction = order_by.strip().partition(" ")
+	direction = (direction.strip() or "desc").lower()
+	if column not in {*aliases, *group_by} or direction not in ("asc", "desc"):
+		raise frappe.ValidationError(f"order_by must be one of {', '.join([*aliases, *group_by])} followed by asc or desc.")
+	return f"{column} {direction}"
+
+
+def _duplicates(doctype, filters, fields, date_field, within_days, limit, parent) -> dict[str, Any]:
+	"""Groups of permitted records whose `fields` match, optionally only within `within_days`
+	of each other on `date_field`. Compared in Python, over every record up to MAX_SCAN_ROWS."""
+	if not fields:
+		raise frappe.ValidationError("duplicates needs `fields` to match on.")
+	_check_fields(doctype, [*fields, *([date_field] if date_field else [])])
+	extra = ["parent"] if parent else []
+	rows = frappe.get_list(
+		doctype,
+		filters=filters,
+		fields=list(dict.fromkeys(["name", *extra, *fields, *([date_field] if date_field else [])])),
+		order_by=f"{date_field} asc" if date_field else "creation asc",
+		limit=MAX_SCAN_ROWS + 1,
+		parent_doctype=parent,
+	)
+	scanned = rows[:MAX_SCAN_ROWS]
+	groups: dict[tuple, list[dict]] = {}
+	for row in scanned:
+		key = tuple(_match_value(row.get(f)) for f in fields)
+		if any(value in (None, "") for value in key):
+			continue
+		groups.setdefault(key, []).append(row)
+	found = []
+	for members in groups.values():
+		for cluster in _date_clusters(members, date_field, within_days):
+			if len(cluster) > 1:
+				found.append(cluster)
+	found.sort(key=len, reverse=True)
+	result = {
+		"match_fields": fields,
+		"records_scanned": len(scanned),
+		"duplicate_groups": len(found),
+		"groups": [_duplicate_group(cluster, fields, date_field, parent) for cluster in found[:limit]],
+	}
+	if len(found) > limit:
+		result["has_more"] = True
+		result["note"] = f"{len(found)} groups found; showing the {limit} largest. Raise limit or narrow filters."
+	if len(rows) > MAX_SCAN_ROWS:
+		result["has_more"] = True
+		result["note"] = f"Only the first {MAX_SCAN_ROWS} records were compared; narrow the filters to cover the rest."
+	return result
+
+
+def _match_value(value: Any) -> Any:
+	if isinstance(value, str):
+		# Imported data carries Excel's "_x000D_" carriage returns and stray spacing.
+		return " ".join(value.replace("_x000D_", " ").split()).casefold()
+	if isinstance(value, float):
+		return round(value, 2)
+	return value
+
+
+def _date_clusters(members: list[dict], date_field: str | None, within_days: int | None) -> list[list[dict]]:
+	"""Split one group into runs whose consecutive dates are at most `within_days` apart."""
+	if not date_field or within_days is None:
+		return [members]
+	ordered = sorted(members, key=lambda row: str(row.get(date_field) or ""))
+	clusters, current, previous = [], [], None
+	for row in ordered:
+		date = frappe.utils.getdate(row.get(date_field)) if row.get(date_field) else None
+		if current and (date is None or previous is None or (date - previous).days > within_days):
+			clusters.append(current)
+			current = []
+		current.append(row)
+		previous = date
+	if current:
+		clusters.append(current)
+	return clusters
+
+
+def _duplicate_group(cluster: list[dict], fields: list[str], date_field: str | None, parent: str | None) -> dict[str, Any]:
+	group: dict[str, Any] = {
+		"match": {f: cluster[0].get(f) for f in fields},
+		"count": len(cluster),
+		"records": [row["name"] for row in cluster[:MAX_GROUP_RECORDS]],
+	}
+	if parent:
+		group["parents"] = list(dict.fromkeys(row["parent"] for row in cluster))[:MAX_GROUP_RECORDS]
+	if date_field:
+		group["dates"] = [row.get(date_field) for row in cluster[:MAX_GROUP_RECORDS]]
+	return group
+
+
+def _field_changes(doctype, fields, since, limit) -> dict[str, Any]:
+	"""Edits to `fields` of `doctype` from its Version history, newest first, for records the
+	user may read."""
+	if fields:
+		_check_fields(doctype, fields)
+	since = since or frappe.utils.add_days(frappe.utils.nowdate(), -90)
+	versions = frappe.get_list(
+		"Version",
+		filters={"ref_doctype": doctype, "creation": [">=", since]},
+		fields=["docname", "owner", "creation", "data"],
+		order_by="creation desc",
+		limit=MAX_SCAN_ROWS,
+	)
+	wanted = set(fields or [])
+	readable: dict[str, bool] = {}
+	changes = []
+	for version in versions:
+		if version.docname not in readable:
+			readable[version.docname] = bool(frappe.has_permission(doctype, "read", version.docname))
+		if not readable[version.docname]:
+			continue
+		try:
+			changed = json.loads(version.data or "{}").get("changed") or []
+		except (TypeError, ValueError):
+			continue
+		for field, old, new in (c for c in changed if isinstance(c, list) and len(c) == 3):
+			if wanted and field not in wanted:
+				continue
+			changes.append(
+				{"docname": version.docname, "field": field, "old": old, "new": new,
+				 "changed_by": version.owner, "changed_at": version.creation}
+			)
+	result = {"since": str(since), "fields": fields or "all", "changes_found": len(changes), "changes": changes[:limit]}
+	if len(changes) > limit:
+		result["has_more"] = True
+		result["note"] = f"{len(changes)} changes found; showing the {limit} newest. Raise limit or narrow `fields`/`since`."
+	return result
+
+
+def _check_fields(doctype: str, fields: list[str]) -> None:
+	"""Only real fields of `doctype` may be grouped, aggregated or compared."""
+	meta = frappe.get_meta(doctype)
+	unknown = [f for f in fields if f not in STANDARD_FIELDS and not meta.has_field(f)]
+	if unknown:
+		raise frappe.ValidationError(f"Unknown fields for {doctype}: {', '.join(unknown)}")
 
 
 def _analysis_fields(doctype: str, requested: list[str] | None) -> list[str]:

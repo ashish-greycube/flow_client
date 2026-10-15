@@ -13,6 +13,7 @@ import KnowledgeBaseFormView from "./views/KnowledgeBaseFormView.vue";
 import KnowledgeSourceFormView from "./views/KnowledgeSourceFormView.vue";
 import File2ERPView from "./views/File2ERPView.vue";
 import File2ERPDetailView from "./views/File2ERPDetailView.vue";
+import File2ERPBatchView from "./views/File2ERPBatchView.vue";
 
 // Frappe treats additional segments after a Page route as route arguments, so
 // the embedded app can use clean, refresh-safe paths under /desk/flow-chat.
@@ -75,6 +76,7 @@ export const router = createRouter({
 			component: KnowledgeSourceFormView,
 		},
 		{ path: "/file2erp", name: "file2erp", component: File2ERPView },
+		{ path: "/file2erp/batch/:batch", name: "file2erp-batch", component: File2ERPBatchView, props: true },
 		{ path: "/file2erp/:name", name: "file2erp-detail", component: File2ERPDetailView, props: true },
 	],
 });
@@ -107,6 +109,7 @@ function toFrappeSegments(route) {
 	}
 	if (route.name === "file2erp") return ["flow-chat", "file2erp"];
 	if (route.name === "file2erp-detail") return ["flow-chat", "file2erp", route.params.name];
+	if (route.name === "file2erp-batch") return ["flow-chat", "file2erp", "batch", route.params.batch];
 	return ["flow-chat"];
 }
 
@@ -147,6 +150,8 @@ function toVueLocation(segments) {
 	}
 	if (section === "file2erp") {
 		if (!sub) return { name: "file2erp" };
+		// Entry names are random hashes, so "batch" never collides with one.
+		if (sub === "batch" && sourcesWord) return { name: "file2erp-batch", params: { batch: sourcesWord } };
 		return { name: "file2erp-detail", params: { name: sub } };
 	}
 	return { name: "chat" };
